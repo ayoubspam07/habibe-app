@@ -1,19 +1,28 @@
 {
+  "labels": {
+    "profile": "Profile",
+    "languages": "Languages",
+    "skills": "Key Skills",
+    "softSkills": "Soft Skills",
+    "experience": "Experience",
+    "education": "Education",
+    "certifications": "Certifications"
+  },
   "basics": {
-    "firstName": "Ayoub",
-    "lastName": "Boudra",
-    "title": "Data Engineer",
-    "tagline": "",
-    "summary": "Data Engineer specialized in Big Data, reliable data pipelines, and scalable architectures for analytics, BI, and AI/ML use cases.",
-    "location": "International mobility",
-    "phone": "+33 7 51 23 51 69",
-    "email": "ayoub.boudra1@gmail.com"
+    "firstName": "Habibe",
+    "lastName": "Kairhani",
+    "title": "HR Assistant",
+    "tagline": "Reliable, concrete, and team-oriented daily HR management",
+    "summary": "Driven by the desire to place people at the heart of the company, I offer a comprehensive HR approach, supported by my mastery of labor law and my great adaptability. My goal is to commit to your side under a permanent contract to support your development, by providing daily HR management that is reliable, concrete, and attentive to the teams.",
+    "location": "Paris, France (Mobile)",
+    "phone": "+33 7 65 19 10 92",
+    "email": "kairhanihabibe@gmail.com"
   },
   "links": [
     {
       "label": "LinkedIn",
-      "value": "/in/ayoub-boudra",
-      "href": "https://www.linkedin.com/in/ayoub-boudra/",
+      "value": "/in/habibe-kairhani",
+      "href": "https://www.linkedin.com/in/habibe-kairhani",
       "icon": "linkedin"
     }
   ],
@@ -24,118 +33,110 @@
     },
     {
       "name": "English",
-      "level": "Fluent"
+      "level": "Intermediate"
     }
   ],
   "skillGroups": [
     {
-      "title": "Programming Languages",
-      "items": ["Python", "SQL", "Shell Scripting"]
+      "title": "HR Administration & Payroll",
+      "items": [
+        "Personnel Administration",
+        "Entry of Variable Pay Elements (EVP)",
+        "Leave and absence management",
+        "Onboarding formalities (DPAE, mutual insurance)"
+      ]
     },
     {
-      "title": "Data Engineering",
-      "items": ["ETL / ELT", "Big Data", "Data Modeling", "Lakehouse", "PySpark", "Kafka"]
+      "title": "Training & Development",
+      "items": [
+        "Training management",
+        "Coordination of apprenticeships and internships",
+        "Digital archiving of training documents"
+      ]
     },
     {
-      "title": "Data Platforms",
-      "items": ["PostgreSQL", "MongoDB", "Snowflake", "BigQuery", "Databricks", "S3"]
+      "title": "Reporting & Analysis",
+      "items": [
+        "Creation and tracking of HR indicators",
+        "Reporting and decision support"
+      ]
     },
     {
-      "title": "Workflow Orchestration",
-      "items": ["Airflow", "Dagster", "REST APIs"]
-    },
-    {
-      "title": "Cloud & Infrastructure",
-      "items": ["AWS", "Azure", "GCP", "Docker", "Kubernetes", "Terraform", "Linux"]
-    },
-    {
-      "title": "Machine Learning & MLOps",
-      "items": ["Feature Engineering", "MLOps", "MLflow"]
-    },
-    {
-      "title": "Generative AI",
-      "items": ["LLMs", "RAG", "Embeddings", "Vector DBs"]
-    },
-    {
-      "title": "Data Quality & Reliability",
-      "items": ["Validation", "Governance", "Lineage", "Observability"]
-    },
-    {
-      "title": "Software Delivery",
-      "items": ["Git", "CI/CD", "System Design", "Agile"]
+      "title": "IT Tools",
+      "items": [
+        "MS Office (Excel, Word...)",
+        "SILAE",
+        "Power BI",
+        "HR Access",
+        "SharePoint",
+        "Demande RH"
+      ]
     }
+  ],
+  "softSkills": [
+    "Team spirit",
+    "Interpersonal skills",
+    "Rigor",
+    "Adaptability",
+    "Attentive to teams"
   ],
   "highlights": [],
   "experience": [
     {
-      "role": "Data Engineer",
-      "company": "BitStream Advisor",
-      "location": "Paris, Ile-de-France, France",
-      "period": "Sep 2025 - Present",
+      "role": "Assistant HR Manager",
+      "company": "SNCF Voyageurs",
+      "location": "Pantin, France",
+      "period": "Sep 2024 - Present",
       "bullets": [
-        "Designed and optimized ETL/ELT pipelines using Snowflake, dbt, SQL, Python, Azure Data Factory, Databricks, and PySpark for analytics and AI/ML use cases.",
-        "Implemented a Medallion architecture to govern enterprise data flows and improve data accessibility for BI, predictive modeling, and AI-driven applications.",
-        "Designed data models, data warehouses, transformation layers, and curated datasets to support analytics, feature engineering, and machine learning workflows.",
-        "Developed web scraping pipelines to collect, clean, and integrate data from external sources.",
-        "Orchestrated end-to-end data workflows using Apache Airflow, ensuring reliable scheduling, monitoring, and automation of data pipelines.",
-        "Managed data storage on AWS S3 and contributed to the implementation of a scalable Data Lake architecture.",
-        "Automated dbt deployments and testing using GitHub Actions and CI/CD best practices, improving reliability, version control, and maintainability.",
-        "Collaborated with Data, Product, and Engineering teams to build scalable, high-performance data pipelines and continuously improve the data platform."
+        "Complete administrative management of training actions: planning, monitoring, and updating files.",
+        "Management and coordination of apprenticeships and internships, from onboarding to administrative monitoring.",
+        "Participation in the operational management of HR activities in line with the company's strategy.",
+        "Implementation and management of digital archiving of training certificates and documents.",
+        "Rigorous monitoring of staff leave, absences, and attendance, in liaison with the manager.",
+        "Creation, analysis, and monitoring of HR indicators for reporting and decision support.",
+        "Collection, entry, and verification of variable pay elements (hours, absences, bonuses, leave).",
+        "Processing of individual requests relating to remuneration and social benefits."
       ]
     },
     {
-      "role": "Data Engineer",
-      "company": "Napta",
-      "location": "Paris, Ile-de-France, France",
-      "period": "Mar 2025 - Aug 2025",
+      "role": "Payroll Administrator",
+      "company": "GDL Expertise",
+      "location": "Paris, France",
+      "period": "May 2024 - Jul 2024",
       "bullets": [
-        "Designed and optimized ETL pipelines using Airflow and Python for data ingestion.",
-        "Improved DAG reliability and maintainability to support AWS-based delivery.",
-        "Contributed to GitLab CI/CD automation, translating business needs into data products.",
-        "Collaborated with cross-functional teams to facilitate production workflows and self-service usage."
+        "Monthly collection, entry, and verification of Variable Pay Elements (EVP).",
+        "Monitoring of working hours and processing of absences (paid leave, RTT, sick leave).",
+        "Management of onboarding formalities: hiring declarations (DPAE) and affiliations (mutual insurance, provident fund)."
       ]
     },
     {
-      "role": "AI Engineer",
-      "company": "Powergo France",
-      "location": "Casablanca, Morocco",
-      "period": "Feb 2024 - Mar 2025",
+      "role": "Customer Advisor",
+      "company": "Webhelp Call Center",
+      "location": "Fes, Morocco",
+      "period": "Sep 2022 - Aug 2023",
       "bullets": [
-        "Implemented a RAG pipeline to generate tailored reports from legal and domain-specific knowledge bases.",
-        "Prepared and indexed unstructured text in MongoDB to enhance semantic search capabilities.",
-        "Designed dynamic prompting and retrieval workflows to improve response relevance and generation quality.",
-        "Contributed to data preparation, prompt engineering, and Kanban delivery for AI reporting workflows."
+        "Welcoming and responding to customers by phone, email, and messaging.",
+        "Providing clear and precise information on products and services.",
+        "Managing and quickly resolving customer complaints.",
+        "Monitoring customer files and updating databases.",
+        "Coordinating with internal teams to handle complex requests.",
+        "Meeting performance objectives and quality standards."
       ]
     }
   ],
   "education": [
     {
-      "degree": "Master of Science in Data Science and Engineering",
-      "school": "Aix-Marseille Universite",
-      "location": "Marseille, France",
-      "period": ""
+      "degree": "Master in Human Resources Management",
+      "school": "ISCG Business School",
+      "location": "Paris, France",
+      "period": "Oct 2024 - Jul 2026"
     },
     {
-      "degree": "Master in Data Science and Intelligent Systems",
-      "school": "Faculty of Sciences and Technology",
-      "location": "Morocco",
-      "period": ""
+      "degree": "Bachelor in Management Applied to Human and Social Sciences",
+      "school": "Université Toulouse Jean-Jaurès",
+      "location": "Toulouse, France",
+      "period": "Sep 2023 - Jun 2024"
     }
   ],
-  "certifications": [
-    {
-      "name": "AWS Certified Data Engineer - Associate preparation",
-      "provider": "Udemy, 22 hours"
-    },
-    {
-      "name": "Data Career Path in Azure Cloud",
-      "provider": "Microsoft Learn",
-      "href": "https://learn.microsoft.com/api/achievements/share/en-gb/ayoubboudra-1521/W7W6DBWN?sharingId=2E84F23501872909"
-    },
-    {
-      "name": "AWS Cloud Basics",
-      "provider": "Great Learning",
-      "href": "https://www.mygreatlearning.com/certificate/PPQRCRSS"
-    }
-  ]
+  "certifications": []
 }
