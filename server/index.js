@@ -2,6 +2,8 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { MongoClient, ObjectId } from 'mongodb';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const { MONGODB_URI, MONGODB_DB = 'job_tracker', PORT = 3001 } = process.env;
 
@@ -156,6 +158,18 @@ app.put('/api/cv-settings/:key', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const distPath = path.join(__dirname, '../dist');
+
+app.use(express.static(distPath));
+
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'));
+});
+
 
 connect()
   .then(() => {
