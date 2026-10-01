@@ -1,0 +1,148 @@
+{
+  "labels": {
+    "profile": "Profil",
+    "languages": "Langues",
+    "skills": "Compétences clés",
+    "experience": "Expériences",
+    "education": "Formation"
+  },
+  "basics": {
+    "firstName": "Ayoub",
+    "lastName": "Boudra",
+    "title": "Data Engineer",
+    "tagline": "",
+    "summary": "Data Engineer spécialisé en Big Data, dans la création de pipelines fiables et d'architectures évolutives pour l'analytique, la BI et les cas d'usage IA/ML.",
+    "location": "Mobilité internationale",
+    "phone": "+33 7 51 23 51 69",
+    "email": "ayoub.boudra1@gmail.com"
+  },
+  "links": [
+    {
+      "label": "LinkedIn",
+      "value": "/in/ayoub-boudra",
+      "href": "https://www.linkedin.com/in/ayoub-boudra/",
+      "icon": "linkedin"
+    }
+  ],
+  "languages": [
+    {
+      "name": "Français",
+      "level": "Courant"
+    },
+    {
+      "name": "Anglais",
+      "level": "Courant"
+    }
+  ],
+  "skillGroups": [
+    {
+      "title": "Langages de programmation",
+      "items": ["Python", "SQL", "Scripts shell"]
+    },
+    {
+      "title": "Ingénierie des données",
+      "items": ["ETL / ELT", "Big Data", "Modélisation des données", "Lakehouse", "PySpark", "Kafka"]
+    },
+    {
+      "title": "Plateformes de données",
+      "items": ["PostgreSQL", "MongoDB", "Snowflake", "BigQuery", "Databricks", "S3"]
+    },
+    {
+      "title": "Orchestration des flux de travail",
+      "items": ["Airflow", "Dagster", "API REST"]
+    },
+    {
+      "title": "Cloud et infrastructure",
+      "items": ["AWS", "Azure", "GCP", "Docker", "Kubernetes", "Terraform", "Linux"]
+    },
+    {
+      "title": "Apprentissage automatique et MLOps",
+      "items": ["Ingénierie des variables", "MLOps", "MLflow"]
+    },
+    {
+      "title": "IA générative",
+      "items": ["LLM", "RAG", "Plongements vectoriels", "Bases de données vectorielles"]
+    },
+    {
+      "title": "Qualité et fiabilité des données",
+      "items": ["Validation", "Gouvernance", "Traçabilité", "Observabilité"]
+    },
+    {
+      "title": "Livraison logicielle",
+      "items": ["Git", "CI/CD", "Conception de systèmes", "Méthodes agiles"]
+    }
+  ],
+  "highlights": [],
+  "experience": [
+    {
+      "role": "Data Engineer",
+      "company": "BitStream Advisor",
+      "location": "Paris, Île-de-France, France",
+      "period": "sept. 2025 - Présent",
+      "bullets": [
+        "Conception et optimisation de pipelines ETL/ELT avec Snowflake, dbt, SQL, Python, Azure Data Factory, Databricks et PySpark pour les cas d'usage analytiques et IA/ML.",
+        "Mise en place d'une architecture Medallion pour gouverner les flux de données d'entreprise et améliorer l'accessibilité des données pour la BI, la modélisation prédictive et les applications pilotées par l'IA.",
+        "Conception de modèles de données, d'entrepôts de données, de couches de transformation et de jeux de données préparés pour soutenir l'analytique, l'ingénierie des variables et les flux d'apprentissage automatique.",
+        "Développement de pipelines d'extraction web pour collecter, nettoyer et intégrer des données issues de sources externes.",
+        "Orchestration de flux de données de bout en bout avec Apache Airflow, en assurant une planification, une supervision et une automatisation fiables des pipelines.",
+        "Gestion du stockage des données sur AWS S3 et contribution à la mise en place d'une architecture de lac de données évolutive.",
+        "Automatisation des déploiements dbt et des tests avec GitHub Actions et de bonnes pratiques CI/CD, afin d'améliorer la fiabilité, la gestion des versions et la maintenabilité.",
+        "Collaboration avec les équipes Données, Produit et Ingénierie pour construire des pipelines performants et faire évoluer continuellement la plateforme de données."
+      ]
+    },
+    {
+      "role": "Data Engineer",
+      "company": "Napta",
+      "location": "Paris, Île-de-France, France",
+      "period": "mars 2025 - août 2025",
+      "bullets": [
+        "Conception et optimisation de pipelines ETL avec Airflow et Python pour l'ingestion de données.",
+        "Amélioration de la fiabilité et de la maintenabilité des DAGs pour soutenir une livraison basée sur AWS.",
+        "Contribution à l'automatisation CI/CD sous GitLab, en traduisant les besoins métier en produits de données.",
+        "Collaboration avec des équipes transverses pour faciliter les flux de production et les usages en libre-service."
+      ]
+    },
+    {
+      "role": "AI Engineer",
+      "company": "Powergo France",
+      "location": "Casablanca, Maroc",
+      "period": "févr. 2024 - mars 2025",
+      "bullets": [
+        "Mise en place d'un pipeline RAG pour générer des rapports personnalisés à partir de bases de connaissances juridiques et métier.",
+        "Préparation et indexation de textes non structurés dans MongoDB pour renforcer les capacités de recherche sémantique.",
+        "Conception de flux dynamiques de rédaction d'instructions et de récupération pour améliorer la pertinence des réponses et la qualité de génération.",
+        "Contribution à la préparation des données, à l'ingénierie des instructions et à la livraison Kanban pour les flux de reporting IA."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "Master Sciences et ingénierie des données",
+      "school": "Aix-Marseille Université",
+      "location": "Marseille, France",
+      "period": ""
+    },
+    {
+      "degree": "Master Sciences des données et systèmes intelligents",
+      "school": "Faculté des Sciences et Techniques",
+      "location": "Maroc",
+      "period": ""
+    }
+  ],
+  "certifications": [
+    {
+      "name": "Préparation AWS Certified Data Engineer - Associate",
+      "provider": "Udemy, 22 heures"
+    },
+    {
+      "name": "Data Career Path in Azure Cloud",
+      "provider": "Microsoft Learn",
+      "href": "https://learn.microsoft.com/api/achievements/share/en-gb/ayoubboudra-1521/W7W6DBWN?sharingId=2E84F23501872909"
+    },
+    {
+      "name": "AWS Cloud Basics",
+      "provider": "Great Learning",
+      "href": "https://www.mygreatlearning.com/certificate/PPQRCRSS"
+    }
+  ]
+}

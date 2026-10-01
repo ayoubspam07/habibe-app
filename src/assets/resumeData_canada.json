@@ -1,0 +1,141 @@
+{
+  "basics": {
+    "firstName": "Ayoub",
+    "lastName": "Boudra",
+    "title": "Data Engineer",
+    "tagline": "",
+    "summary": "Data Engineer specialized in Big Data, reliable data pipelines, and scalable architectures for analytics, BI, and AI/ML use cases.",
+    "location": "International mobility",
+    "phone": "+33 7 51 23 51 69",
+    "email": "ayoub.boudra1@gmail.com"
+  },
+  "links": [
+    {
+      "label": "LinkedIn",
+      "value": "/in/ayoub-boudra",
+      "href": "https://www.linkedin.com/in/ayoub-boudra/",
+      "icon": "linkedin"
+    }
+  ],
+  "languages": [
+    {
+      "name": "French",
+      "level": "Fluent"
+    },
+    {
+      "name": "English",
+      "level": "Fluent"
+    }
+  ],
+  "skillGroups": [
+    {
+      "title": "Programming Languages",
+      "items": ["Python", "SQL", "Shell Scripting"]
+    },
+    {
+      "title": "Data Engineering",
+      "items": ["ETL / ELT", "Big Data", "Data Modeling", "Lakehouse", "PySpark", "Kafka"]
+    },
+    {
+      "title": "Data Platforms",
+      "items": ["PostgreSQL", "MongoDB", "Snowflake", "BigQuery", "Databricks", "S3"]
+    },
+    {
+      "title": "Workflow Orchestration",
+      "items": ["Airflow", "Dagster", "REST APIs"]
+    },
+    {
+      "title": "Cloud & Infrastructure",
+      "items": ["AWS", "Azure", "GCP", "Docker", "Kubernetes", "Terraform", "Linux"]
+    },
+    {
+      "title": "Machine Learning & MLOps",
+      "items": ["Feature Engineering", "MLOps", "MLflow"]
+    },
+    {
+      "title": "Generative AI",
+      "items": ["LLMs", "RAG", "Embeddings", "Vector DBs"]
+    },
+    {
+      "title": "Data Quality & Reliability",
+      "items": ["Validation", "Governance", "Lineage", "Observability"]
+    },
+    {
+      "title": "Software Delivery",
+      "items": ["Git", "CI/CD", "System Design", "Agile"]
+    }
+  ],
+  "highlights": [],
+  "experience": [
+    {
+      "role": "Data Engineer",
+      "company": "BitStream Advisor",
+      "location": "Paris, Ile-de-France, France",
+      "period": "Sep 2025 - Present",
+      "bullets": [
+        "Designed and optimized ETL/ELT pipelines using Snowflake, dbt, SQL, Python, Azure Data Factory, Databricks, and PySpark for analytics and AI/ML use cases.",
+        "Implemented a Medallion architecture to govern enterprise data flows and improve data accessibility for BI, predictive modeling, and AI-driven applications.",
+        "Designed data models, data warehouses, transformation layers, and curated datasets to support analytics, feature engineering, and machine learning workflows.",
+        "Developed web scraping pipelines to collect, clean, and integrate data from external sources.",
+        "Orchestrated end-to-end data workflows using Apache Airflow, ensuring reliable scheduling, monitoring, and automation of data pipelines.",
+        "Managed data storage on AWS S3 and contributed to the implementation of a scalable Data Lake architecture.",
+        "Automated dbt deployments and testing using GitHub Actions and CI/CD best practices, improving reliability, version control, and maintainability.",
+        "Collaborated with Data, Product, and Engineering teams to build scalable, high-performance data pipelines and continuously improve the data platform."
+      ]
+    },
+    {
+      "role": "Data Engineer",
+      "company": "Napta",
+      "location": "Paris, Ile-de-France, France",
+      "period": "Mar 2025 - Aug 2025",
+      "bullets": [
+        "Designed and optimized ETL pipelines using Airflow and Python for data ingestion.",
+        "Improved DAG reliability and maintainability to support AWS-based delivery.",
+        "Contributed to GitLab CI/CD automation, translating business needs into data products.",
+        "Collaborated with cross-functional teams to facilitate production workflows and self-service usage."
+      ]
+    },
+    {
+      "role": "AI Engineer",
+      "company": "Powergo France",
+      "location": "Casablanca, Morocco",
+      "period": "Feb 2024 - Mar 2025",
+      "bullets": [
+        "Implemented a RAG pipeline to generate tailored reports from legal and domain-specific knowledge bases.",
+        "Prepared and indexed unstructured text in MongoDB to enhance semantic search capabilities.",
+        "Designed dynamic prompting and retrieval workflows to improve response relevance and generation quality.",
+        "Contributed to data preparation, prompt engineering, and Kanban delivery for AI reporting workflows."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "Master of Science in Data Science and Engineering",
+      "school": "Aix-Marseille Universite",
+      "location": "Marseille, France",
+      "period": ""
+    },
+    {
+      "degree": "Master in Data Science and Intelligent Systems",
+      "school": "Faculty of Sciences and Technology",
+      "location": "Morocco",
+      "period": ""
+    }
+  ],
+  "certifications": [
+    {
+      "name": "AWS Certified Data Engineer - Associate preparation",
+      "provider": "Udemy, 22 hours"
+    },
+    {
+      "name": "Data Career Path in Azure Cloud",
+      "provider": "Microsoft Learn",
+      "href": "https://learn.microsoft.com/api/achievements/share/en-gb/ayoubboudra-1521/W7W6DBWN?sharingId=2E84F23501872909"
+    },
+    {
+      "name": "AWS Cloud Basics",
+      "provider": "Great Learning",
+      "href": "https://www.mygreatlearning.com/certificate/PPQRCRSS"
+    }
+  ]
+}

@@ -1,0 +1,152 @@
+{
+  "labels": {
+    "profile": "Profil",
+    "languages": "Langues",
+    "skills": "Compétences clés",
+    "softSkills": "Compétences comportementales",
+    "experience": "Expériences",
+    "education": "Formation",
+    "certifications": "Certifications"
+  },
+  "basics": {
+    "firstName": "Ayoub",
+    "lastName": "Boudra",
+    "title": "Data Engineer",
+    "tagline": "",
+    "summary": "Data Engineer spécialisé en Big Data, dans la création de pipelines fiables et d'architectures évolutives pour l'analytique, la BI et les cas d'usage IA/ML.",
+    "location": "France",
+    "phone": "+33 7 51 23 51 69",
+    "email": "ayoub.boudra1@gmail.com"
+  },
+  "links": [
+    {
+      "label": "LinkedIn",
+      "value": "/in/ayoub-boudra",
+      "href": "https://www.linkedin.com/in/ayoub-boudra/",
+      "icon": "linkedin"
+    }
+  ],
+  "languages": [
+    {
+      "name": "Français",
+      "level": "Courant"
+    },
+    {
+      "name": "Anglais",
+      "level": "Courant"
+    }
+  ],
+  "skillGroups": [
+    {
+      "title": "Langages de programmation",
+      "items": ["Python", "SQL", "Scripts shell"]
+    },
+    {
+      "title": "Ingénierie des données",
+      "items": ["ETL / ELT", "Big Data", "Modélisation des données", "Lakehouse", "PySpark", "Kafka"]
+    },
+    {
+      "title": "Plateformes de données",
+      "items": ["PostgreSQL", "MongoDB", "Snowflake", "BigQuery", "Databricks", "S3"]
+    },
+    {
+      "title": "Orchestration des flux de travail",
+      "items": ["Airflow", "Dagster", "API REST"]
+    },
+    {
+      "title": "Cloud et infrastructure",
+      "items": ["AWS", "Azure", "GCP", "Docker", "Kubernetes", "Terraform", "Linux"]
+    },
+    {
+      "title": "Apprentissage automatique et MLOps",
+      "items": ["Ingénierie des variables", "MLOps", "MLflow"]
+    },
+    {
+      "title": "IA générative",
+      "items": ["LLM", "RAG", "Plongements vectoriels", "Bases de données vectorielles"]
+    },
+    {
+      "title": "Qualité et fiabilité des données",
+      "items": ["Validation", "Gouvernance", "Traçabilité", "Observabilité"]
+    },
+    {
+      "title": "Livraison logicielle",
+      "items": ["Git", "CI/CD", "Conception de systèmes", "Méthodes agiles"]
+    }
+  ],
+  "softSkills": ["Travail en équipe", "Communication", "Résolution de problèmes", "Adaptabilité", "Autonomie"],
+  "highlights": [],
+  "experience": [
+    {
+      "role": "Data & AI Engineer",
+      "company": "BitStream Advisor",
+      "location": "Paris, Île-de-France, France",
+      "period": "sept. 2025 - Présent",
+      "bullets": [
+        "Conception et maintenance de pipelines ETL/ELT avec Snowflake, dbt, SQL, Python, Azure Data Factory, Databricks et PySpark pour les cas d'usage analytiques et IA/ML.",
+        "Contribution à une architecture Medallion pour structurer les flux de données d'entreprise et améliorer l'accessibilité des données pour la BI, la prévision et les applications IA.",
+        "Création de modèles de données, de couches de transformation et de jeux de données préparés pour l'analytique, la préparation de variables et les flux d'apprentissage automatique.",
+        "Développement de pipelines d'extraction web et d'ingestion pour collecter, nettoyer et intégrer des sources de données externes.",
+        "Utilisation d'Apache Airflow pour orchestrer et superviser les flux de données planifiés.",
+        "Travail avec AWS S3 et les composants de lac de données pour prendre en charge le stockage et le traitement évolutif des données.",
+        "Automatisation des tests et déploiements dbt avec GitHub Actions et des pratiques CI/CD pour améliorer la fiabilité et la maintenabilité.",
+        "Collaboration avec les équipes Données, Produit et Ingénierie pour livrer des pipelines évolutifs et faire évoluer la plateforme de données."
+      ]
+    },
+    {
+      "role": "Data Engineer",
+      "company": "NAPTA",
+      "location": "Paris, Île-de-France, France",
+      "period": "mars 2025 - août 2025",
+      "bullets": [
+        "Conception et amélioration de pipelines ETL/ELT avec Apache Airflow et Python pour ingérer et transformer des données issues d'API, de lacs de données et de stockages cloud en jeux de données prêts pour l'analytique.",
+        "Amélioration de la fiabilité et de la maintenabilité des DAGs tout en travaillant avec les services AWS, notamment EC2, S3 et Amazon MWAA.",
+        "Contribution à l'automatisation CI/CD sous GitLab et aux contrôles de qualité des données pour assurer des déploiements plus fiables.",
+        "Collaboration avec les équipes métier, produit et ingénierie pour transformer les besoins en données en jeux de données réutilisables, en documentation et en ressources de reporting en libre-service."
+      ]
+    },
+    {
+      "role": "Data & AI Engineer",
+      "company": "Powergo France",
+      "location": "Paris, France",
+      "period": "févr. 2024 - mars 2025",
+      "bullets": [
+        "Contribution à un processus de génération augmentée par récupération (RAG) utilisé pour générer des rapports sur mesure à partir de bases de connaissances juridiques et sectorielles.",
+        "Utilisation d'Apache Spark, Hadoop et des services GCP pour préparer et traiter de grands volumes de données pour les flux d'IA et de reporting.",
+        "Création de pipelines d'extraction, de découpage (chunking) et d'indexation dans MongoDB pour soutenir la recherche sémantique et la récupération contextuelle.",
+        "Travail sur la conception des prompts et la logique de récupération pour améliorer la pertinence des réponses et la qualité des résultats.",
+        "Soutien à la préparation des données et à la livraison itérative de fonctionnalités de reporting IA dans le cadre d'un processus agile."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "Master Sciences et ingénierie des données",
+      "school": "Aix-Marseille Université",
+      "location": "Marseille, France",
+      "period": ""
+    },
+    {
+      "degree": "Master Sciences des données et systèmes intelligents",
+      "school": "Faculté des Sciences et Techniques",
+      "location": "Maroc",
+      "period": ""
+    }
+  ],
+  "certifications": [
+    {
+      "name": "Préparation AWS Certified Data Engineer - Associate",
+      "provider": "Udemy, 22 heures"
+    },
+    {
+      "name": "Data Career Path in Azure Cloud",
+      "provider": "Microsoft Learn",
+      "href": "https://learn.microsoft.com/api/achievements/share/en-gb/ayoubboudra-1521/W7W6DBWN?sharingId=2E84F23501872909"
+    },
+    {
+      "name": "AWS Cloud Basics",
+      "provider": "Great Learning",
+      "href": "https://www.mygreatlearning.com/certificate/PPQRCRSS"
+    }
+  ]
+}
