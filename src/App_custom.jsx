@@ -362,7 +362,7 @@ function SoftSkillsSection({ resumeData }) {
 
   return (
     <section className="soft_skills section" id="soft-skills">
-      <SectionTitle>{resumeData.labels?.softSkills ?? 'Soft Skills'}</SectionTitle>
+      <SectionTitle>{'Qualités'}</SectionTitle>
       <div className="skill_chips soft_skills_chips">
         {softSkills.map((item) => (
           <span className="skill_chip" key={item}>
