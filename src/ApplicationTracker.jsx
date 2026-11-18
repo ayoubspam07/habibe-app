@@ -11,6 +11,9 @@ const TEXT = {
     title: 'Intitulé du poste',
     company: 'Entreprise',
     url: 'Lien de l’offre',
+    appliedAt: 'Date de candidature',
+    createdAt: 'Date de création',
+    applicationEmail: 'E-mail utilisé',
     jobDescription: 'Description du poste',
     resumeJson: 'JSON du CV utilisé',
     status: 'Statut',
@@ -20,6 +23,10 @@ const TEXT = {
     close: 'Fermer',
     download: 'Télécharger le CV',
     delete: 'Supprimer',
+    deleteConfirmTitle: 'Confirmer la suppression',
+    deleteConfirmMessage: 'Voulez-vous supprimer cette candidature ? Cette action est définitive.',
+    deleteConfirm: 'Supprimer définitivement',
+    deleting: 'Suppression…',
     open: 'Voir l’offre',
     required: 'L’intitulé et l’entreprise sont obligatoires.',
     loadError: 'Impossible de charger les candidatures. Le serveur API est-il démarré ?',
@@ -49,6 +56,9 @@ const TEXT = {
     title: 'Job title',
     company: 'Company',
     url: 'Job posting URL',
+    appliedAt: 'Application date',
+    createdAt: 'Created on',
+    applicationEmail: 'Email used',
     jobDescription: 'Job description',
     resumeJson: 'Resume JSON used',
     status: 'Status',
@@ -58,6 +68,10 @@ const TEXT = {
     close: 'Close',
     download: 'Download resume',
     delete: 'Delete',
+    deleteConfirmTitle: 'Confirm deletion',
+    deleteConfirmMessage: 'Delete this application? This action cannot be undone.',
+    deleteConfirm: 'Delete permanently',
+    deleting: 'Deleting…',
     open: 'Open posting',
     required: 'Title and company are required.',
     loadError: 'Could not load applications. Is the API server running?',
@@ -82,14 +96,23 @@ const TEXT = {
   },
 };
 
-const emptyForm = {
-  title: '',
-  company: '',
-  url: '',
-  jobDescription: '',
-  resumeJson: '',
-  status: 'Saved',
-};
+function getToday() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
+function createEmptyForm() {
+  return {
+    title: '',
+    company: '',
+    url: '',
+    appliedAt: getToday(),
+    applicationEmail: '',
+    jobDescription: '',
+    resumeJson: '',
+    status: 'Saved',
+  };
+}
 
 function StatusBadge({ status }) {
   return <span className={`trk-badge trk-badge--${status.toLowerCase()}`}>{status}</span>;
@@ -97,7 +120,7 @@ function StatusBadge({ status }) {
 
 function formatDate(iso, locale) {
   if (!iso) return '';
-  const d = new Date(iso);
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(`${iso}T00:00:00`) : new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-US', {
     day: '2-digit',
@@ -126,7 +149,7 @@ function downloadResume(app) {
 }
 
 function ApplicationForm({ t, onCancel, onSaved }) {
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(createEmptyForm);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -151,7 +174,7 @@ function ApplicationForm({ t, onCancel, onSaved }) {
       if (!res.ok) throw new Error('save failed');
       const created = await res.json();
       onSaved(created);
-      setForm(emptyForm);
+      setForm(createEmptyForm());
     } catch {
       setError(t.loadError);
     } finally {
@@ -173,6 +196,14 @@ function ApplicationForm({ t, onCancel, onSaved }) {
         <label className="trk-field">
           <span>{t.url}</span>
           <input type="url" value={form.url} onChange={(e) => update('url', e.target.value)} placeholder="https://" />
+        </label>
+        <label className="trk-field">
+          <span>{t.appliedAt}</span>
+          <input type="date" value={form.appliedAt} onChange={(e) => update('appliedAt', e.target.value)} />
+        </label>
+        <label className="trk-field">
+          <span>{t.applicationEmail}</span>
+          <input type="email" value={form.applicationEmail} onChange={(e) => update('applicationEmail', e.target.value)} />
         </label>
         <label className="trk-field">
           <span>{t.status}</span>
@@ -219,6 +250,8 @@ function ApplicationForm({ t, onCancel, onSaved }) {
 function DetailModal({ t, app, onClose, onStatusChange, onSave, onDelete }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(app);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => setDraft(app), [app]);
 
@@ -231,15 +264,29 @@ function DetailModal({ t, app, onClose, onStatusChange, onSave, onDelete }) {
     setEditing(false);
   }
 
+  async function deleteApplication() {
+    setDeleting(true);
+    const deleted = await onDelete(app.id);
+    setDeleting(false);
+    if (deleted) {
+      setConfirmDelete(false);
+      onClose();
+    }
+  }
+
   useEffect(() => {
     function onKey(e) {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        if (confirmDelete) setConfirmDelete(false);
+        else onClose();
+      }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [confirmDelete, onClose]);
 
   return (
+    <>
     <div className="trk-modal-overlay" onClick={onClose} role="presentation">
       <div className="trk-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         <header className="trk-modal-head">
@@ -253,12 +300,20 @@ function DetailModal({ t, app, onClose, onStatusChange, onSave, onDelete }) {
         </header>
 
         <div className="trk-modal-body">
+          {app.createdAt && (
+            <div className="trk-detail-row">
+              <span className="trk-detail-label">{t.createdAt}</span>
+              <span className="trk-detail-value">{formatDate(app.createdAt, t === TEXT.fr ? 'fr' : 'en')}</span>
+            </div>
+          )}
           {editing ? (
             <div className="trk-edit-form">
               <div className="trk-form-grid">
                 <label className="trk-field"><span>{t.title} *</span><input value={draft.title ?? ''} onChange={(e) => update('title', e.target.value)} /></label>
                 <label className="trk-field"><span>{t.company} *</span><input value={draft.company ?? ''} onChange={(e) => update('company', e.target.value)} /></label>
                 <label className="trk-field"><span>{t.url}</span><input type="url" value={draft.url ?? ''} onChange={(e) => update('url', e.target.value)} /></label>
+                <label className="trk-field"><span>{t.appliedAt}</span><input type="date" value={draft.appliedAt ?? draft.createdAt?.slice(0, 10) ?? ''} onChange={(e) => update('appliedAt', e.target.value)} /></label>
+                <label className="trk-field"><span>{t.applicationEmail}</span><input type="email" value={draft.applicationEmail ?? ''} onChange={(e) => update('applicationEmail', e.target.value)} /></label>
                 <label className="trk-field"><span>{t.location}</span><input value={draft.location ?? ''} onChange={(e) => update('location', e.target.value)} /></label>
                 <label className="trk-field"><span>{t.contractType}</span><input value={draft.contractType ?? ''} onChange={(e) => update('contractType', e.target.value)} /></label>
                 <label className="trk-field"><span>{t.status}</span><select value={draft.status ?? 'Saved'} onChange={(e) => update('status', e.target.value)}>{STATUSES.map((status) => <option key={status}>{status}</option>)}</select></label>
@@ -288,10 +343,17 @@ function DetailModal({ t, app, onClose, onStatusChange, onSave, onDelete }) {
             </select>
           </div>
 
-          {app.createdAt && (
+          {(app.appliedAt || app.createdAt) && (
             <div className="trk-detail-row">
-              <span className="trk-detail-label">{t.date}</span>
-              <span className="trk-detail-value">{formatDate(app.createdAt, t === TEXT.fr ? 'fr' : 'en')}</span>
+              <span className="trk-detail-label">{t.appliedAt}</span>
+              <span className="trk-detail-value">{formatDate(app.appliedAt || app.createdAt, t === TEXT.fr ? 'fr' : 'en')}</span>
+            </div>
+          )}
+
+          {app.applicationEmail && (
+            <div className="trk-detail-row">
+              <span className="trk-detail-label">{t.applicationEmail}</span>
+              <span className="trk-detail-value">{app.applicationEmail}</span>
             </div>
           )}
 
@@ -328,7 +390,7 @@ function DetailModal({ t, app, onClose, onStatusChange, onSave, onDelete }) {
         </div>
 
         <footer className="trk-modal-foot">
-          <button type="button" className="trk-btn trk-btn--danger" onClick={() => onDelete(app.id)}>
+          <button type="button" className="trk-btn trk-btn--danger" onClick={() => setConfirmDelete(true)}>
             <FontAwesomeIcon icon={['fas', 'trash']} /> {t.delete}
           </button>
           {editing ? (
@@ -350,6 +412,38 @@ function DetailModal({ t, app, onClose, onStatusChange, onSave, onDelete }) {
         </footer>
       </div>
     </div>
+    {confirmDelete && (
+      <div
+        className="trk-modal-overlay trk-confirm-overlay"
+        onClick={(event) => { event.stopPropagation(); setConfirmDelete(false); }}
+        role="presentation"
+      >
+        <section
+          className="trk-modal trk-confirm-modal"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="trk-delete-confirm-title"
+          aria-describedby="trk-delete-confirm-message"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <header className="trk-modal-head">
+            <h2 className="trk-modal-title" id="trk-delete-confirm-title">{t.deleteConfirmTitle}</h2>
+          </header>
+          <div className="trk-modal-body">
+            <p id="trk-delete-confirm-message">{t.deleteConfirmMessage}</p>
+          </div>
+          <footer className="trk-modal-foot">
+            <button type="button" className="trk-btn" onClick={() => setConfirmDelete(false)} disabled={deleting}>
+              {t.cancel}
+            </button>
+            <button type="button" className="trk-btn trk-btn--danger" onClick={deleteApplication} disabled={deleting}>
+              <FontAwesomeIcon icon={['fas', 'trash']} /> {deleting ? t.deleting : t.deleteConfirm}
+            </button>
+          </footer>
+        </section>
+      </div>
+    )}
+    </>
   );
 }
 
@@ -427,12 +521,15 @@ function ApplicationTracker({ locale = 'en', refreshKey = 0, openCandidate = nul
   }
 
   async function handleDelete(id) {
-    setApps((prev) => prev.filter((a) => a.id !== id));
-    setSelected(null);
     try {
-      await fetch(`/api/applications/${id}`, { method: 'DELETE' });
+      const response = await fetch(`/api/applications/${id}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('delete failed');
+      setApps((prev) => prev.filter((app) => app.id !== id));
+      setSelected(null);
+      return true;
     } catch {
       setError(t.loadError);
+      return false;
     }
   }
 
@@ -444,7 +541,7 @@ function ApplicationTracker({ locale = 'en', refreshKey = 0, openCandidate = nul
       a.title.toLowerCase().includes(query_) ||
       a.company.toLowerCase().includes(query_);
     const matchesStatus = statusFilter === 'All' || a.status === statusFilter;
-    const matchesDate = !dateFrom || (a.createdAt && a.createdAt.slice(0, 10) >= dateFrom);
+    const matchesDate = !dateFrom || ((a.appliedAt || a.createdAt) && (a.appliedAt || a.createdAt).slice(0, 10) >= dateFrom);
     let matchesScore = true;
     if (scoreOp !== 'any' && scoreThreshold !== null && !Number.isNaN(scoreThreshold)) {
       const s = typeof a.matchScore === 'number' ? a.matchScore : null;
@@ -530,9 +627,9 @@ function ApplicationTracker({ locale = 'en', refreshKey = 0, openCandidate = nul
                 <span className="trk-item-main">
                   <span className="trk-item-title">{app.title}</span>
                   <span className="trk-item-company">{app.company}</span>
-                  {app.createdAt && (
+                  {(app.appliedAt || app.createdAt) && (
                     <span className="trk-item-date">
-                      <FontAwesomeIcon icon={['fas', 'calendar-day']} /> {formatDate(app.createdAt, locale)}
+                      <FontAwesomeIcon icon={['fas', 'calendar-day']} /> {t.appliedAt}: {formatDate(app.appliedAt || app.createdAt, locale)}
                     </span>
                   )}
                 </span>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import './App.css';
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { fab } from '@fortawesome/free-brands-svg-icons';
@@ -53,7 +53,6 @@ function isValidResumeData(data) {
 function getPromptResume(resume) {
   const {
     links: _links,
-    languages: _languages,
     basics: { email: _email, phone: _phone, location: _location, ...editableBasics },
     ...editableResume
   } = resume;
@@ -63,6 +62,35 @@ function getPromptResume(resume) {
 
 function SectionTitle({ children }) {
   return <h2 className="section-title">{children}</h2>;
+}
+
+function formatExperienceDuration(totalMonths, locale) {
+  const years = Math.floor(totalMonths / 12);
+  const months = totalMonths % 12;
+
+  if (locale === 'fr') {
+    const yearLabel = years > 1 ? 'ans' : 'an';
+    const monthLabel = 'mois';
+    return [years ? `${years} ${yearLabel}` : '', months ? `${months} ${monthLabel}` : ''].filter(Boolean).join(' ');
+  }
+
+  return [
+    years ? `${years} ${years === 1 ? 'year' : 'years'}` : '',
+    months ? `${months} ${months === 1 ? 'month' : 'months'}` : '',
+  ].filter(Boolean).join(' ');
+}
+
+function ExperienceTotals({ locale, className = '' }) {
+  return null;
+}
+
+function ExperienceTypeBadges({ value, className = 'experience_type_badge' }) {
+  if (!value) return null;
+
+  return value.split('·').map((type) => {
+    const label = type.trim();
+    return <span className={className} key={label}>{label}</span>;
+  });
 }
 
 function getLinkIcon(link) {
@@ -111,13 +139,14 @@ function normalizeResumeData(baseResume, resume) {
     basics: {
       ...(baseResume.basics ?? {}),
       ...(resume.basics ?? {}),
+      tagline: baseResume.basics?.tagline ?? '',
       title: sanitizeResumeTitle(resume.basics?.title, baseResume.basics?.title ?? ''),
-      email: baseResume.basics?.email ?? '',
-      phone: baseResume.basics?.phone ?? '',
-      location: baseResume.basics?.location ?? '',
+      email: resume.basics?.email ?? baseResume.basics?.email ?? '',
+      phone: resume.basics?.phone ?? baseResume.basics?.phone ?? '',
+      location: resume.basics?.location ?? baseResume.basics?.location ?? '',
     },
     links: baseResume.links ?? [],
-    languages: baseResume.languages ?? [],
+    languages: Array.isArray(resume.languages) ? resume.languages : (baseResume.languages ?? []),
     skillGroups: Array.isArray(resume.skillGroups) ? resume.skillGroups : (baseResume.skillGroups ?? []),
     softSkills: Array.isArray(resume.softSkills) ? resume.softSkills : (baseResume.softSkills ?? []),
     highlights: Array.isArray(resume.highlights) ? resume.highlights : (baseResume.highlights ?? []),
@@ -135,43 +164,66 @@ Your mission: take my resume (JSON below) and the job offer (pasted at the VERY 
 Hard constraints (never break these):
 - Never invent employers, job titles, degrees, dates, certifications, or achievements I do not already have.
 - Never fabricate metrics or results that are not already present in my resume.
-- Only add skills or tools that are truthful: things the offer requires and I genuinely know or use, even if I forgot to list them, plus closely related skills that strengthen the same profile.
+- Do not infer capabilities or responsibilities just because they appear in the offer. When the offer targets a different cloud, you may map cloud-provider-specific services in the explicitly authorized skill and experience fields to functional equivalents in the target cloud, while preserving the same underlying capabilities and responsibilities. Do not add unrelated tools, services, features, or proficiency; identify requirements without a reasonable equivalent in application.missingProfile.
+- Do not change industries, seniority, responsibilities, achievements, or proficiency levels beyond this explicitly authorized cloud-service mapping and truthful tailoring of existing evidence.
+
+## STEP 0 — Detect the offer language (do this first)
+- Before anything else, detect the natural language in which the job offer is written (e.g. French, English). This is the "offer language".
+- The offer language — NOT the language of my resume — governs every word you write. This rule has the highest priority and overrides any other instinct to keep the source language.
+- If the offer mixes languages, choose the dominant language used for the responsibilities and requirements.
 
 ## STEP 1 — Analyze the job offer
 - The full job description is pasted at the very bottom, after the line "=== JOB DESCRIPTION BELOW ===". Read it fully before touching the resume.
-- Identify: the exact job title, seniority level, must-have skills/tools, nice-to-have skills, main responsibilities, domain/industry context, and the language of the offer.
+- Identify: the exact job title, seniority level, must-have skills/tools, nice-to-have skills, main responsibilities, domain/industry context, and the offer language detected in STEP 0.
 
 ## STEP 2 — Tailor the resume aggressively
 
 Title & summary:
-- Align basics.title with the job title, using natural, established professional and IT titles (e.g. "Data Engineer", "Data & AI Engineer", "AI Engineer", "Software Engineer") rather than awkward literal translations. Apply the same rule to experience role titles.
+- Set basics.title to exactly one of these two titles: "Data Engineer" or "Data & AI Engineer".
+- Choose "Data & AI Engineer" only when the offer has substantial AI/ML, generative AI, or RAG responsibilities and my resume provides relevant evidence. Otherwise choose "Data Engineer", including when the offer is mainly about data pipelines, cloud platforms, analytics, or data warehousing.
+- Keep actual experience role titles unchanged. Do not derive or upgrade a past job title from the offer.
 - Write basics.title as plain text only — never Markdown, links, URLs, JSON fragments, or encoded text.
 - Rewrite basics.summary as 1-2 punchy sentences mirroring the role's top priorities, using natural professional/IT terminology (e.g. "data pipelines", "cloud", "Big Data", "analytics", "BI", "AI/ML") where truthful and relevant — never stuff keywords just for ATS.
-- Keep basics.tagline as an empty string. Never add a subtitle under the title.
+- Keep basics.tagline exactly as it appears in the input. It is a fixed headline shown under the name, so never rewrite, translate, or remove it, and never add any other subtitle under the title.
+
+Resume structure and authorized edits:
+- Preserve every original top-level and nested key, key name, object, and data type. Never add, delete, rename, or restructure a resume field or object.
+- The only existing resume values you may edit are basics.title, basics.summary, skillGroups[*].items[*], experience[*].bullets[*], and experience[*].contracts[*].bullets[*] (only for experiences that have a contracts array). Do not change group titles, soft skills, role titles, employers, locations, contract types, dates and periods, education, certifications, highlights, tagline, or any other value.
+- Within the authorized skill item and experience bullet arrays, you may add, remove, reorder, and rewrite entries as needed for the offer, while keeping each array field present and its value an array.
+- You may map cloud-provider-specific skill names and services in those authorized fields to functional equivalents in the requested target cloud. Preserve the same underlying capabilities; do not introduce unrelated tools, features, achievements, or responsibilities.
+- The sole permitted structural addition is exactly one top-level "application" object using the schema specified below. Do not add any other key to the resume or to application.
 
 Skills (skillGroups):
 - Build a focused skills section for THIS offer: required skills first, then strong related skills the employer would value.
 - Use short, canonical skill names only (e.g. "Spark" not "Apache Spark"; "Airflow" not "Apache Airflow"). Apply the same shortening to any other technology when the shorter name is clear and widely recognized.
-- Never duplicate a skill (including aliases, spelling, or case variants) — keep each skill exactly once, in the single most relevant group.
+- Never duplicate a skill (including aliases, spelling, or case variants) — keep each skill exactly once, in the most relevant existing group.
 - Prefer concise terms over descriptive phrases for skill items.
 - Order skills so the strongest recruiter-facing keywords for this offer appear first and are easy to notice.
-- Add every skill the offer requires that I genuinely know or work with, even if missing from my current resume, and integrate it naturally into skillGroups and relevant experience bullets. Assume skills matching the offer that aren't yet listed are ones I actually use but forgot to add.
-- Add adjacent or transferable skills that truthfully strengthen my fit, even when not a main requirement — but except for domain knowledge, never add a skill I have no real experience with.
+- Include required skills only when supported by my resume or by the explicitly permitted mapping of an existing cloud service to its target-cloud equivalent. Do not infer other unlisted skills; report unsupported requirements as gaps instead.
+- Include adjacent or transferable skills only when the resume provides evidence for them. Do not add domain knowledge or other skills without evidence.
 - If I have few matching skills, keep the required ones I truly have first, then add my other truthful skills most likely to interest this employer.
 - Use the offer's exact terminology when my resume already supports the skill under different wording.
-- You may freely rename, merge, reorder, or remove skill groups.
 
 Soft skills (softSkills):
-- Keep 3-6 truthful interpersonal strengths that support the role, using concise job-relevant wording. Remove any that don't help this offer.
+- Preserve the existing softSkills field and its contents unchanged.
 
 Experience:
-- Reorder and rewrite bullets so each role speaks directly to the offer's responsibilities and requirements.
-- Lead with the most relevant achievements; remove, merge, or shorten low-relevance bullets.
-- Use strong action verbs and the offer's keywords wherever truthfully applicable.
-- Keep existing quantified results exactly as they are; never fabricate numbers.
+- Adapt the structure, content, and emphasis of my professional experience to the specific job offer. Rewrite, reorder, merge, or remove bullets so that each role highlights the most relevant responsibilities, technical skills, tools, and achievements.
+- Make each experience section feel tailored to the target role rather than reusing generic bullets across applications. Prioritize the employer's most important requirements and use the job description's terminology naturally wherever it accurately reflects my experience.
+- Identify and incorporate relevant skills that I genuinely have but may have forgotten to include in my current CV. Use the information available in my resume, previous experience descriptions, and other context I have provided. When a requested technology is already supported by this information, integrate it into the most relevant experience and describe how it was used in a credible, technically specific bullet.
+- When a job requires a particular technology, such as Power BI, Tableau, Azure, AWS, Snowflake, or Databricks, check whether my existing experience supports it before deciding how to represent it. If I have genuinely used the technology but omitted it from my CV, include it naturally in the relevant role. If my experience includes comparable tools or transferable skills but does not establish hands-on use of the requested technology, highlight the relevant transferable experience without falsely claiming that I used that specific tool.
+- When the available information is insufficient to determine whether I have used a required technology, do not automatically exclude it or assume I have experience with it. Instead, use the closest supported evidence and identify the uncertain or missing skill in application.missingProfile when relevant.
+- Where technically appropriate, adapt existing responsibilities to the target role's context. For example, emphasize data modeling, reporting, and analytical transformations for an Analytics Engineer position; pipeline reliability, orchestration, and performance for a Data Engineer position; or cloud infrastructure, deployment, and monitoring for a Cloud Data Engineer position. Preserve the underlying facts and do not change the nature of the work I actually performed.
+- Prioritize the most relevant experience and strongest evidence first. Use clear action verbs, specific technical details, and concise, outcome-oriented wording. Explain what I built or improved, how I did it, and why it mattered whenever the available information supports those details.
+- Keep existing quantified results exactly as they are. Never invent metrics, achievements, business impact, production usage, project ownership, responsibilities, or levels of expertise.
+- Keep all employer names, actual job titles, employment dates, and other protected resume fields unchanged. Do not promote me to a more senior role or imply responsibilities that I did not have.
+- Adjust the number and length of bullets to the relevance and seniority of each position. Remove redundant or low-value details, avoid repeating the same technologies in every bullet, and ensure that each experience contributes distinct evidence of my suitability.
+- Prioritize recruiter readability, technical credibility, and factual relevance over keyword stuffing. Incorporate important ATS keywords naturally, focusing on the requirements that are most significant for the position.
+- Final objective: Produce the strongest possible job-specific experience section by presenting my genuine experience in the most relevant way, recovering omitted skills when supported by evidence, and clearly distinguishing demonstrated expertise from transferable skills or genuine gaps. The result must remain credible and defensible in a technical interview.
 
 Formatting:
-- Set every education[].period to an empty string.
+- Preserve education dates and periods from the input. Do not remove them unless explicitly asked.
+- Some experiences contain a "contracts" array (for example an internship followed by a permanent contract at the same employer). Tailor the bullets of each contract separately, keep every contract's contractType and period unchanged, and never move bullets between contracts or merge, add, or remove contracts.
 
 ## STEP 3 — Extract the job info
 From the job description, extract:
@@ -182,38 +234,135 @@ From the job description, extract:
 - jobDescription: a cleaned copy of the full description text
 
 ## STEP 4 — Assess my chances honestly
-- qualified: true only if I meet most key requirements.
-- matchScore: integer 0-100, my realistic chance of getting an interview.
-- assessment: 2-3 sentences — my main strengths for this role and the main gaps.
+- Classify each stated qualification as must-have/mandatory or desirable/nice-to-have based on the wording and context of the offer. Do not treat a desirable qualification as mandatory.
+- Calculate matchScore as an evidence-based integer from 0 to 100 using this fixed rubric: mandatory requirements coverage 50 points; relevant responsibilities and demonstrated outcomes 25 points; requested cloud/data-platform fit 15 points; desirable qualifications 10 points. Award points only for evidence in my resume, and do not count the same evidence twice across categories.
+- qualified: true only when I meet the offer's explicit hard-gate requirements and most of its other mandatory requirements. If no hard gates are explicit, base it on whether I meet most mandatory requirements. Nice-to-have gaps alone must not make me unqualified.
+- Include the distinction in application.requirements by prefixing each item with "Must-have:" or "Nice-to-have:" in the offer language.
+- assessment: 2-3 sentences identifying the strongest evidenced matches and the most material mandatory gaps. The score is a measure of resume evidence fit, not a probability of getting an interview.
 - missingProfile: 1 concise paragraph listing the missing skills, experience, or signals in my profile for this role.
 
 ## OUTPUT FORMAT (strict)
 - Return ONLY one valid JSON object, directly parseable with JSON.parse().
-- Keep the EXACT same structure, keys, and data types as my resume JSON.
-- Add exactly ONE extra top-level key: "application": { "title": "", "company": "", "url": "", "location": "", "contractType": "", "summary": "", "missions": [], "requirements": [], "jobDescription": "", "missingProfile": "", "qualified": false, "matchScore": 0, "assessment": "" }.
+- Preserve all original resume keys, nested keys, data types, object counts, and every value outside the explicitly authorized paths. Add exactly ONE top-level key named "application" with this schema: { "title": "", "company": "", "url": "", "location": "", "contractType": "", "summary": "", "missions": [], "requirements": [], "jobDescription": "", "missingProfile": "", "qualified": false, "matchScore": 0, "assessment": "" }. Do not add any other fields.
+- Base qualified, matchScore, and assessment only on evidence in my resume and the stated requirements; do not present matchScore as a guaranteed interview probability.
 - No markdown, no code fences, no comments, no text before or after the JSON.
 `;
 
-function buildResumePrompt(resumeJson, jobOffer = '', instructions = '') {
-  const resume = (resumeJson || '').trim() || '{ /* your resume JSON */ }';
+function getExperienceSeedKey(experience, index) {
+  return `${experience.company || ''}::${experience.role || ''}::${index}`;
+}
+
+function loadExperienceSeeds(experiences) {
+  const saved = localStorage.getItem('resumePromptExperienceSeeds_v1');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+    } catch {
+      return {};
+    }
+  }
+
+  const legacySeeds = (localStorage.getItem('resumePromptSeeds_v1') || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (!legacySeeds.length) return {};
+
+  let selectedExperiences = experiences.map((_, index) => index);
+  try {
+    const savedSelection = JSON.parse(localStorage.getItem('resumePromptSeedExperiences_v1') || 'null');
+    if (Array.isArray(savedSelection)) {
+      selectedExperiences = savedSelection.filter(
+        (index) => Number.isInteger(index) && index >= 0 && index < experiences.length,
+      );
+    }
+  } catch {
+    selectedExperiences = experiences.map((_, index) => index);
+  }
+
+  return Object.fromEntries(
+    selectedExperiences.map((index) => [getExperienceSeedKey(experiences[index], index), legacySeeds.join('\n')]),
+  );
+}
+
+function buildResumePrompt(resumeJson, jobOffer = '', instructions = '', experienceSeeds = {}) {
+  let resume = (resumeJson || '').trim() || '{ /* your resume JSON */ }';
   const promptInstructions = instructions.trim() || DEFAULT_PROMPT_INSTRUCTIONS;
+  const seededExperiences = [];
+
+  if (Object.values(experienceSeeds).some((value) => typeof value === 'string' && value.trim()) && resumeJson.trim()) {
+    const resumeData = JSON.parse(resume);
+    if (Array.isArray(resumeData.experience)) {
+      resumeData.experience.forEach((experience, index) => {
+        const lines = String(experienceSeeds[getExperienceSeedKey(experience, index)] || '')
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter(Boolean);
+        if (!lines.length) return;
+
+        seededExperiences.push({
+          label: [experience.role, experience.company].filter(Boolean).join(' · ')
+            || `Experience ${index + 1}`,
+          lines,
+        });
+        if (!Array.isArray(experience.bullets)) return;
+        const existingBullets = new Set(experience.bullets);
+        lines.forEach((line) => {
+          if (!existingBullets.has(line)) {
+            experience.bullets.push(line);
+            existingBullets.add(line);
+          }
+        });
+      });
+    }
+    resume = JSON.stringify(resumeData, null, 2);
+  }
 
   return `${promptInstructions}
 
-## OFFER LANGUAGE (mandatory)
-- Detect the language of the job offer below before rewriting anything.
-- If the offer is in English, write the entire tailored resume in English.
-- If the offer is in French, write the entire tailored resume in French.
-- If the source resume JSON is in a different language, translate rewritten/generated resume text, labels, skill-group titles, summaries, and experience bullets into the offer language.
-- Write all generated application fields (summary, missions, requirements, jobDescription, missingProfile, and assessment) in the offer language too.
-- Keep proper names, company names, product names, and technical terms in their standard form.
+## FACTUAL ACCURACY (mandatory)
+- This mandatory section overrides any conflicting instruction above, including saved custom instructions.
+- Do not infer new capabilities, responsibilities, industries, achievements, or proficiency from the offer. A cloud-service substitution is explicitly permitted in the authorized skill and experience fields as described below; otherwise include a skill only when supported by the resume or identify it as a gap.
+- Preserve all original resume keys, nested keys, data types, and object counts. The only editable existing paths are basics.title, basics.summary, skillGroups[*].items[*], experience[*].bullets[*], and experience[*].contracts[*].bullets[*]. Within these authorized arrays, entries may be added, removed, reordered, or rewritten for tailoring. Never add, delete, rename, or restructure any resume field or object; keep all other values unchanged. The only permitted structural addition is one top-level application object with the exact schema above.
+- Do not invent or change employers, actual experience titles, achievements, metrics, qualifications, contract types, or dates and periods. Keep all experience role titles unchanged. Preserve education periods from the input.
+- Set basics.title to exactly "Data Engineer" or "Data & AI Engineer". Choose "Data & AI Engineer" only if AI/ML, generative AI, or RAG is a substantial part of the offer and my resume provides relevant evidence; otherwise choose "Data Engineer". Do not create another profile-title variant.
+- Prioritize recruiter readability and factual relevance first, ATS terminology second. Use important keywords naturally and avoid repeating the same technology in every section.
+
+## CLOUD AND DATA PLATFORM ALIGNMENT (mandatory)
+- Identify the primary cloud provider requested by the offer: AWS, Azure, or GCP. If one is named, use it as the target cloud throughout the authorized skill items and experience bullets. If the offer is cloud-agnostic, use AWS as the default.
+- When the target cloud differs from a cloud named in the source resume, actively convert cloud-specific provider and service names in the authorized fields to their closest functional equivalents in the target cloud. Apply this consistently across relevant skills and experience bullets; do not leave the source provider in place merely because that is what the source text says. For example, map object storage, compute, and managed workflow/orchestration services to corresponding services in the target cloud.
+- Make substitutions by capability, not blind word replacement: retain the same task, data flow, and responsibility, and do not imply additional service features, work, or outcomes. If no reasonable target-cloud equivalent exists, use a provider-neutral description and note the limitation in application.missingProfile.
+- Keep cloud-independent technologies such as Python, SQL, dbt, Airflow, Snowflake, Spark, and Databricks unless the offer specifically prioritizes a supported alternative. Do not treat Databricks as a cloud provider; when relevant, align its cloud context to the offer (for example, Azure Databricks for an Azure-targeted role).
+- For Snowflake roles, prioritize Snowflake, dbt, SQL, warehousing, and data modeling. For Databricks roles, prioritize Databricks, Spark/PySpark, lakehouse, and data processing. When multiple platforms are named, follow their importance in the offer.
+- For a cloud-agnostic offer, prioritize AWS service equivalents by default. Keep the original JSON keys, object structure, and data types unchanged; only the authorized skill items and experience bullets may be transformed for cloud alignment.
+
+## JOB MATCH SCORING (mandatory)
+- Classify offer requirements as "Must-have" or "Nice-to-have" from explicit wording and context. Mark each application.requirements item with the matching prefix, translated into the offer language. Do not promote desirable items into mandatory requirements.
+- Score evidence from 0 to 100 with this fixed weighting: mandatory requirements coverage 50 points; relevant responsibilities and demonstrated outcomes 25 points; requested cloud/data-platform fit 15 points; desirable requirements 10 points. Give credit only for evidence actually present in the resume, and do not count the same evidence twice across categories.
+- Set application.qualified to true only if explicit hard gates are met and most other mandatory requirements are evidenced. If the offer has no explicit hard gates, require evidence for most mandatory requirements. Nice-to-have gaps alone must not make the candidate unqualified.
+- Keep application.assessment to 2-3 sentences explaining the strongest evidence and the main mandatory gaps. Treat matchScore as evidence-based fit, never as an interview probability.
+
+## OFFER LANGUAGE (mandatory — highest priority)
+- Write the ENTIRE output in the offer language detected in STEP 0, whatever that language is (French, English, German, Spanish, Italian, etc.). Never default to English and never keep the source-resume language out of habit.
+- Translate every human-readable field into the offer language: basics.title, basics.summary, every skill-group title, every skill item that is a common word (keep canonical tool/technology names unchanged), every soft skill, every experience and education title, description, and bullet, and all labels.
+- Also write every generated application field in the offer language: summary, missions, requirements, jobDescription, missingProfile, and assessment.
+- The whole document must be 100% consistent in one single language — never mix two languages in the same output, and never leave leftover text in the original resume language.
+- Produce natural, idiomatic, native-level wording for that language — do not do word-for-word literal translation; adapt phrasing, grammar, accents, and professional terminology to sound like it was written by a native speaker.
+- Keep unchanged (do NOT translate): proper names, company names, product names, established technology/tool names (e.g. Spark, Airflow, Python, AWS), and widely used English IT terms that professionals in the target language normally keep in English.
+- Use the standard professional job titles of the offer language (e.g. use "Ingénieur Data" or keep "Data Engineer" if that is the common usage in that market) rather than awkward literal translations.
 
 ## My current resume (JSON)
 ${resume}
 
+## Seeds
+- The user-provided project details below have been added to the bullets of their corresponding experiences in the resume JSON. Treat them as factual information supplied by the user and use them to enrich only that experience. Do not invent extra details.
+${seededExperiences.map(({ label, lines }) => `### ${label}\n${lines.map((line) => `- ${line}`).join('\n')}`).join('\n\n') || '(No experience-specific project details provided.)'}
+
 ## Fixed fields omitted from the JSON
-- Contact information (basics.email, basics.phone, basics.location), links, and languages are managed by the application.
+- Contact information (basics.email, basics.phone, basics.location) and links are managed by the application.
 - Do not add these fields to the output. The application restores their fixed values automatically.
+- Languages are included in the JSON above. Keep the "languages" array exactly as provided (same names and levels, same order), and include it in the output unchanged. Do not translate, remove, add, or reorder languages.
 - Preserve the exact structure of the JSON provided above; the omitted fixed fields are the only exception to the general output rules.
 
 === JOB DESCRIPTION BELOW ===
@@ -222,7 +371,6 @@ ${jobOffer.trim() || '(Paste the full job offer here.)'}
 `;
 }
 
-// Creates a job application (candidate) from a resume paste that carries job metadata.
 async function createApplication(payload) {
   const res = await fetch('/api/applications', {
     method: 'POST',
@@ -272,6 +420,7 @@ function Home({ resumeData, showImage = true }) {
             {resumeData.basics.firstName} <b>{resumeData.basics.lastName}</b>
           </h1>
           <h3 className="home_profession">{resumeData.basics.title}</h3>
+          {resumeData.basics.tagline && <p className="home_profession_description">{resumeData.basics.tagline}</p>}
         </div>
       </div>
     </section>
@@ -313,24 +462,6 @@ function Contact({ resumeData }) {
   );
 }
 
-function Languages({ resumeData }) {
-  return (
-    <section className="languages section" id="languages">
-      <SectionTitle>{resumeData.labels?.languages ?? 'Languages'}</SectionTitle>
-      <div className="languages_container">
-        <ul className="languages_content bd-grid">
-          {resumeData.languages.map((language) => (
-            <li key={language.name} className="languages_name language_row">
-              <span className="languages_text">{language.name}</span>
-              <span className="language_level">{language.level}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </section>
-  );
-}
-
 function Skills({ resumeData }) {
   const skillGroups = resumeData.skillGroups ?? [];
 
@@ -362,7 +493,7 @@ function SoftSkillsSection({ resumeData }) {
 
   return (
     <section className="soft_skills section" id="soft-skills">
-      <SectionTitle>{'Qualités'}</SectionTitle>
+      <SectionTitle>{resumeData.labels?.softSkills ?? 'Soft Skills'}</SectionTitle>
       <div className="skill_chips soft_skills_chips">
         {softSkills.map((item) => (
           <span className="skill_chip" key={item}>
@@ -374,35 +505,98 @@ function SoftSkillsSection({ resumeData }) {
   );
 }
 
-function ExperienceSection({ resumeData }) {
+function ExperienceSection({ resumeData, locale }) {
   return (
     <section className="experience section" id="experience">
-      <SectionTitle>{'Expériences professionnelles'}</SectionTitle>
+      <div className="experience_section_header">
+        <SectionTitle>{resumeData.labels?.experience ?? 'Experience'}</SectionTitle>
+        <ExperienceTotals locale={locale} />
+      </div>
       <div className="experience_container bd-grid">
-        {resumeData.experience.map((job, index) => (
-          <div className="experience_content" key={`${job.company}-${job.role}`}>
-            <div className="experience_time">
-              <span className="experience_rounder"></span>
-              {index < resumeData.experience.length - 1 && <span className="experience_line"></span>}
-            </div>
+        {resumeData.experience.map((job, index) => {
+          const hasNext = index < resumeData.experience.length - 1;
 
-            <div className="experience_data bd-grid">
-              <div className="experience_header">
-                <h3 className="experience_title">{job.role}</h3>
-                <span className="experience_year">{job.period}</span>
+          if (!job.contracts) {
+            return (
+              <div className="experience_content" key={`${job.company}-${job.role}`}>
+                <div className="experience_time">
+                  <span className="experience_rounder"></span>
+                  {hasNext && <span className="experience_line"></span>}
+                </div>
+
+                <div className="experience_data bd-grid">
+                  <div className="experience_header">
+                    <h3 className="experience_title">{job.role}</h3>
+                    {job.period && <span className="experience_year experience_period">{job.period}</span>}
+                  </div>
+                  <span className="experience_employer">{job.company}</span>
+                  {(job.location || job.contractType) && (
+                    <div className="experience_meta">
+                      {job.location && <span className="experience_meta_item experience_location">{job.location}</span>}
+                      {job.contractType && <ExperienceTypeBadges value={job.contractType} />}
+                    </div>
+                  )}
+                  <ul className="experience_description experience_list">
+                    {job.bullets.map((bullet) => (
+                      <li key={bullet}>{bullet}</li>
+                    ))}
+                  </ul>
+                </div>
               </div>
-              <span className="experience_company">
-                {job.company}
-                {job.location && <span className="experience_location"> — {job.location}</span>}
-              </span>
-              <ul className="experience_description experience_list">
-                {job.bullets.map((bullet) => (
-                  <li key={bullet}>{bullet}</li>
-                ))}
-              </ul>
+            );
+          }
+
+          return (
+            <div className="experience_content experience_content--stacked" key={`${job.company}-${job.role}`}>
+              <div className="experience_time">
+                <span className="experience_track"></span>
+                <span className="experience_rounder"></span>
+              </div>
+
+              <div className="experience_data bd-grid">
+                <div className="experience_header">
+                  <h3 className="experience_title">{job.role}</h3>
+                </div>
+                <span className="experience_employer">{job.company}</span>
+                {job.location && (
+                  <div className="experience_meta">
+                    <span className="experience_meta_item experience_location">{job.location}</span>
+                  </div>
+                )}
+              </div>
+
+              {job.contracts.map((contract, contractIndex) => {
+                const isLastContract = contractIndex === job.contracts.length - 1;
+                return (
+                  <Fragment key={`${contract.contractType}-${contract.period}`}>
+                    <div className="experience_time experience_contract_time">
+                      <span className={`experience_track${isLastContract && hasNext ? ' experience_track--bridge' : ''}`}></span>
+                      <span className="experience_rounder experience_rounder--contract"></span>
+                    </div>
+                    <div className={`experience_contract${contractIndex > 0 ? ' experience_contract--next' : ''}`}>
+                      <div className="experience_contract_head">
+                        <ExperienceTypeBadges value={contract.contractType} />
+                        <span className="experience_year experience_period">{contract.period}</span>
+                      </div>
+                      <ul className="experience_description experience_list">
+                        {(contract.bullets ?? []).map((bullet) => (
+                          <li key={bullet}>{bullet}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </Fragment>
+                );
+              })}
+              {job.bullets?.length > 0 && (
+                <ul className="experience_description experience_list experience_shared_list">
+                  {job.bullets.map((bullet) => (
+                    <li key={bullet}>{bullet}</li>
+                  ))}
+                </ul>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
@@ -411,18 +605,16 @@ function ExperienceSection({ resumeData }) {
 function EducationSection({ resumeData }) {
   return (
     <section className="education section" id="education">
-      <SectionTitle>{'Formations'}</SectionTitle>
+      <SectionTitle>{resumeData.labels?.education ?? 'Education'}</SectionTitle>
 
       <div className="education_container bd-grid">
-        {resumeData.education.map((item, index) => (
+        {resumeData.education.map((item) => (
           <div className="experience_content" key={`${item.degree}-${item.period}`}>
-            <div className="experience_time">
-              <span className="experience_rounder"></span>
-              {index < resumeData.education.length - 1 && <span className="experience_line"></span>}
-            </div>
             <div className="experience_data bd-grid">
+
               <div className="experience_header">
                 <h3 className="experience_title">{item.degree}</h3>
+                {item.period && <span className="experience_year">{item.period}</span>}
               </div>
               <span className="experience_company">
                 {item.school}
@@ -440,8 +632,28 @@ function SummarySection({ resumeData }) {
   if (!resumeData.basics?.summary) return null;
   return (
     <section className="summary section" id="summary">
-      <SectionTitle>{resumeData.labels?.summary ?? 'Profil'}</SectionTitle>
+      <SectionTitle>{resumeData.labels?.summary ?? 'Profile'}</SectionTitle>
       <p className="summary_text">{resumeData.basics.summary}</p>
+    </section>
+  );
+}
+
+function LanguagesSection({ resumeData }) {
+  const languages = resumeData.languages ?? [];
+  if (languages.length === 0) return null;
+  return (
+    <section className="languages section" id="languages">
+      <SectionTitle>{resumeData.labels?.languages ?? 'Languages'}</SectionTitle>
+      <div className="languages_container">
+        <ul className="languages_content bd-grid">
+          {languages.map((language) => (
+            <li key={language.name} className="languages_name language_row">
+              <span className="languages_text">{language.name}</span>
+              <span className="language_level">{language.level}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
     </section>
   );
 }
@@ -476,25 +688,29 @@ function HighlightsSection({ resumeData }) {
 }
 
 function PageNav({ page, onPageChange, locale }) {
+  const isCvActive = page === 'cv' || page === 'application';
+  const isCoverLetterActive = page === 'cover-letter';
+  const isTrackerActive = page === 'tracker';
+
   return (
-    <nav className="page_nav" aria-label={locale === 'fr' ? 'Navigation des CV' : 'Resume navigation'}>
+    <nav className="page_nav" aria-label={locale === 'fr' ? 'Navigation principale' : 'Main navigation'}>
       <button
         type="button"
-        className={`page_nav_button ${page === 'cv' ? 'is-active' : ''}`}
+        className={`page_nav_button ${isCvActive ? 'is-active' : ''}`}
         onClick={() => onPageChange('cv')}
       >
-        CV
+        {locale === 'fr' ? 'CV' : 'Resume'}
       </button>
       <button
         type="button"
-        className={`page_nav_button ${page === 'canada' ? 'is-active' : ''}`}
-        onClick={() => onPageChange('canada')}
+        className={`page_nav_button ${isCoverLetterActive ? 'is-active' : ''}`}
+        onClick={() => onPageChange('cover-letter')}
       >
-        {locale === 'fr' ? 'CV canadien' : 'Canadian CV'}
+        {locale === 'fr' ? 'Lettre de motivation' : 'Cover Letter'}
       </button>
       <button
         type="button"
-        className={`page_nav_button ${page === 'tracker' ? 'is-active' : ''}`}
+        className={`page_nav_button ${isTrackerActive ? 'is-active' : ''}`}
         onClick={() => onPageChange('tracker')}
       >
         {locale === 'fr' ? 'Candidatures' : 'Applications'}
@@ -597,17 +813,100 @@ function CandidateSidebar({ locale, open, onToggle, refreshKey, onSelect, onApps
   );
 }
 
-function FloatingTools({ locale, page, onCopy, onPaste, onCopyPrompt, onEditResume }) {
+function LetterHistorySidebar({ locale, open, onToggle, letters, activeId, onSelect }) {
+  const [companyQuery, setCompanyQuery] = useState('');
+  const fr = locale === 'fr';
+  const labels = {
+    title: fr ? 'Historique des lettres' : 'Cover letter history',
+    defaultItem: fr ? 'Lettre par défaut' : 'Default cover letter',
+    empty: fr ? 'Aucune lettre enregistrée.' : 'No saved letters yet.',
+    open: fr ? 'Ouvrir la liste' : 'Open list',
+    close: fr ? 'Réduire la liste' : 'Collapse list',
+    search: fr ? 'Rechercher une entreprise…' : 'Search company…',
+    noMatch: fr ? 'Aucune entreprise trouvée.' : 'No companies found.',
+  };
+  const normalizedQuery = companyQuery.trim().toLocaleLowerCase();
+  const filteredLetters = letters.filter((item) =>
+    !normalizedQuery || (item.company ?? '').toLocaleLowerCase().includes(normalizedQuery),
+  );
+
+  return (
+    <aside className={`cand_sidebar ${open ? 'is-open' : 'is-collapsed'}`}>
+      <button
+        type="button"
+        className="cand_sidebar_toggle"
+        onClick={onToggle}
+        aria-label={open ? labels.close : labels.open}
+        aria-expanded={open}
+      >
+        <FontAwesomeIcon icon={['fas', open ? 'angles-left' : 'angles-right']} />
+      </button>
+      {open && (
+        <div className="cand_sidebar_body">
+          <h2 className="cand_sidebar_title">{labels.title}</h2>
+          {letters.length > 0 && (
+            <label className="cand_sidebar_search">
+              <FontAwesomeIcon icon={['fas', 'magnifying-glass']} aria-hidden="true" />
+              <input
+                type="search"
+                value={companyQuery}
+                onChange={(event) => setCompanyQuery(event.target.value)}
+                placeholder={labels.search}
+                aria-label={labels.search}
+              />
+            </label>
+          )}
+          <ul className="cand_sidebar_list">
+            <li>
+              <button
+                type="button"
+                className={`cand_sidebar_item ${activeId === null ? 'is-active' : ''}`}
+                onClick={() => onSelect(null)}
+              >
+                <span className="cand_sidebar_item_title">{labels.defaultItem}</span>
+              </button>
+            </li>
+            {letters.length === 0 && <p className="cand_sidebar_empty">{labels.empty}</p>}
+            {letters.length > 0 && filteredLetters.length === 0 && (
+              <p className="cand_sidebar_empty">{labels.noMatch}</p>
+            )}
+            {filteredLetters.map((item) => (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  className={`cand_sidebar_item ${activeId === item.id ? 'is-active' : ''}`}
+                  onClick={() => onSelect(item.id)}
+                >
+                  <span className="cand_sidebar_item_title">{item.jobTitle || item.company}</span>
+                  <span className="cand_sidebar_item_company">{item.company}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </aside>
+  );
+}
+
+function FloatingTools({ locale, page, onCopy, onPaste, onCopyPrompt, onEditResume, onCopyCoverLetter, onEditCoverLetter }) {
   if (page === 'tracker') return null;
+  const isCoverLetter = page === 'cover-letter';
+
   const tools = [
-    { key: 'copy', icon: 'copy', label: locale === 'fr' ? 'Copier JSON' : 'Copy JSON', action: onCopy },
+    isCoverLetter
+      ? { key: 'copy-cl', icon: 'copy', label: locale === 'fr' ? 'Copier le texte' : 'Copy text', action: onCopyCoverLetter }
+      : { key: 'copy', icon: 'copy', label: locale === 'fr' ? 'Copier JSON' : 'Copy JSON', action: onCopy },
     { key: 'prompt', icon: 'wand-magic-sparkles', label: locale === 'fr' ? 'Prompt IA' : 'AI prompt', action: onCopyPrompt },
-    (page === 'cv' || page === 'application') && { key: 'edit', icon: 'pen-to-square', label: locale === 'fr' ? 'Modifier le CV' : 'Edit resume', action: onEditResume },
-    page === 'cv' && { key: 'paste', icon: 'paste', label: locale === 'fr' ? 'Coller JSON' : 'Paste JSON', action: onPaste },
+    isCoverLetter && { key: 'edit-cl', icon: 'pen-to-square', label: locale === 'fr' ? 'Modifier la lettre' : 'Edit cover letter', action: onEditCoverLetter },
+    !isCoverLetter && (page === 'application' || page === 'cv') && { key: 'edit', icon: 'pen-to-square', label: locale === 'fr' ? 'Modifier ce CV' : 'Edit this resume', action: onEditResume },
+    isCoverLetter
+      ? { key: 'paste', icon: 'paste', label: locale === 'fr' ? 'Coller JSON' : 'Paste JSON', action: onPaste }
+      : { key: 'paste', icon: 'paste', label: locale === 'fr' ? 'Coller JSON' : 'Paste JSON', action: onPaste },
   ].filter(Boolean);
 
   return (
-    <div className="floating_tools" aria-label={locale === 'fr' ? 'Outils du CV' : 'Resume tools'}>
+    <div className="floating_tools" aria-label={locale === 'fr' ? 'Outils' : 'Tools'}>
       {tools.map((tool) => (
         <button key={tool.key} type="button" className="floating_tool_menu_button" onClick={tool.action}>
           <FontAwesomeIcon icon={['fas', tool.icon]} />
@@ -629,16 +928,16 @@ function ActionToast({ message }) {
   );
 }
 
-const SECTION_ORDER = ['profile', 'contact', 'summary', 'highlights', 'languages', 'skills', 'softSkills', 'experience', 'education', 'certifications'];
+const SECTION_ORDER = ['profile', 'contact', 'summary', 'highlights', 'skills', 'softSkills', 'languages', 'experience', 'education', 'certifications'];
 
 const SECTION_COMPONENTS = {
   profile: Home,
   contact: Contact,
   summary: SummarySection,
   highlights: HighlightsSection,
-  languages: Languages,
   skills: Skills,
   softSkills: SoftSkillsSection,
+  languages: LanguagesSection,
   experience: ExperienceSection,
   education: EducationSection,
   certifications: CertificationsSection,
@@ -649,15 +948,18 @@ const BASE_FONT_PX = 0.82 * 16;
 
 const defaultCvSettings = {
   fontScale: 1,
+  titleScale: 1,
+  titleCaps: true,
   accent: '#12467c',
   showImage: true,
   photoSize: 96,
-  columns: { profile: 'left', contact: 'right', summary: 'right', highlights: 'right', languages: 'left', skills: 'left', softSkills: 'left', experience: 'right', education: 'right', certifications: 'left' },
-  visible: { profile: true, contact: true, summary: true, highlights: true, languages: true, skills: true, softSkills: true, experience: true, education: true, certifications: true },
-  sectionScale: { profile: 1, contact: 1, summary: 1, highlights: 1, languages: 1, skills: 1, softSkills: 1, experience: 1, education: 1, certifications: 1 },
+  columns: { profile: 'left', contact: 'left', summary: 'right', highlights: 'right', skills: 'left', softSkills: 'left', languages: 'left', experience: 'right', education: 'right', certifications: 'left' },
+  visible: { profile: true, contact: true, summary: true, highlights: true, skills: true, softSkills: true, languages: true, experience: true, education: true, certifications: true },
+  sectionScale: { profile: 1, contact: 0.8, summary: 0.81, highlights: 1, skills: 0.78, softSkills: 0.77, languages: 0.81, experience: 0.81, education: 0.79, certifications: 1 },
+  experienceSpacing: { marginTopOn: true, marginTop: 0.4, gapOn: true, gap: 0.34 },
 };
 
-const CANADA_FIELD_ORDER = ['name', 'title', 'location', 'phone', 'email', 'links', 'summary', 'skills', 'experience', 'education', 'languages'];
+const CANADA_FIELD_ORDER = ['name', 'title', 'tagline', 'location', 'phone', 'email', 'links', 'summary', 'skills', 'languages', 'experience', 'education'];
 
 const defaultCanadaSettings = {
   fontScale: 1,
@@ -682,6 +984,7 @@ function CvCustomizer({
 }) {
   const fr = locale === 'fr';
   const isCanada = variant === 'canada';
+  const [openGaps, setOpenGaps] = useState({});
   const [hex, setHex] = useState('');
 
   const patch = (next) => onSettingsChange({ ...settings, ...next });
@@ -691,15 +994,17 @@ function CvCustomizer({
     onSettingsChange({ ...settings, visible: { ...settings.visible, [key]: val } });
   const setSectionScale = (key, val) =>
     onSettingsChange({ ...settings, sectionScale: { ...settings.sectionScale, [key]: val } });
+  const setExperienceSpacing = (patch) =>
+    onSettingsChange({ ...settings, experienceSpacing: { ...defaultCvSettings.experienceSpacing, ...settings.experienceSpacing, ...patch } });
   const setPageMargin = (edge, value) =>
     onSettingsChange({ ...settings, pageMargins: { ...settings.pageMargins, [edge]: value } });
 
   const sectionLabels = fr
-    ? { profile: 'Identité', contact: 'Contact', summary: 'Profil', highlights: 'Points forts', languages: 'Langues', skills: 'Compétences', softSkills: 'Qualités', experience: 'Expérience', education: 'Formation', certifications: 'Certifications' }
+    ? { profile: 'Identité', contact: 'Contact', summary: 'Profil', highlights: 'Points forts', languages: 'Langues', skills: 'Compétences', softSkills: 'Qualités', experience: 'Expériences professionnelles', education: 'Formations', certifications: 'Certifications' }
     : { profile: 'Identity', contact: 'Contact', summary: 'Profile', highlights: 'Highlights', languages: 'Languages', skills: 'Skills', softSkills: 'Soft Skills', experience: 'Experience', education: 'Education', certifications: 'Certifications' };
   const canadaFieldLabels = fr
-    ? { name: 'Nom', title: 'Titre professionnel', location: 'Localisation', phone: 'Téléphone', email: 'E-mail', links: 'Liens', education: 'Formation', experience: 'Expérience', skills: 'Compétences', languages: 'Langues' }
-    : { name: 'Name', title: 'Professional title', location: 'Location', phone: 'Phone', email: 'Email', links: 'Links', education: 'Education', experience: 'Experience', skills: 'Skills', languages: 'Languages' };
+    ? { name: 'Nom', title: 'Titre professionnel', tagline: 'Accroche', location: 'Localisation', phone: 'Téléphone', email: 'E-mail', links: 'Liens', education: 'Formation', experience: 'Expérience', skills: 'Compétences', languages: 'Langues' }
+    : { name: 'Name', title: 'Professional title', tagline: 'Tagline', location: 'Location', phone: 'Phone', email: 'Email', links: 'Links', education: 'Education', experience: 'Experience', skills: 'Skills', languages: 'Languages' };
 
   function applyHex() {
     const value = hex.trim();
@@ -750,6 +1055,29 @@ function CvCustomizer({
               </span>
             </div>
           </div>
+
+          {!isCanada && <div className="cvx-block">
+            <h3 className="cvx-title">{fr ? 'Titres de section' : 'Section titles'}</h3>
+            <div className="cvx-row">
+              <input
+                type="range"
+                min="0.6"
+                max="1.3"
+                step="0.01"
+                value={settings.titleScale ?? 1}
+                onChange={(e) => patch({ titleScale: Number(e.target.value) })}
+              />
+              <span className="cvx-value">{Math.round((settings.titleScale ?? 1) * 100)}%</span>
+            </div>
+            <label className="cvx-check">
+              <input
+                type="checkbox"
+                checked={settings.titleCaps ?? true}
+                onChange={(e) => patch({ titleCaps: e.target.checked })}
+              />
+              <span>{fr ? 'Majuscules et espacement' : 'Uppercase and letter spacing'}</span>
+            </label>
+          </div>}
 
           {isCanada && <div className="cvx-block">
             <h3 className="cvx-title">{fr ? 'Marges de la page PDF' : 'PDF page margins'}</h3>
@@ -852,21 +1180,48 @@ function CvCustomizer({
                     {fr ? 'D' : 'R'}
                   </button>
                 </div>}
+                {!isCanada && key === 'experience' && <button
+                  type="button"
+                  className={`cvx-gap-toggle${openGaps[key] ? ' is-open' : ''}`}
+                  onClick={() => setOpenGaps((prev) => ({ ...prev, [key]: !prev[key] }))}
+                  title={fr ? 'Espaces de la description' : 'Description spacing'}
+                  aria-expanded={!!openGaps[key]}
+                >
+                  {openGaps[key] ? '▴' : '▾'}
+                </button>}
               </div>
               {!isCanada && <label className="cvx-zone-size"><span>{fr ? 'Taille' : 'Size'} {Math.round((settings.sectionScale?.[key] ?? 1) * 100)}% · {((settings.sectionScale?.[key] ?? 1) * settings.fontScale * BASE_FONT_PX).toFixed(1)}px</span><input type="range" min="0.75" max="1.3" step="0.01" value={settings.sectionScale?.[key] ?? 1} onChange={(e) => setSectionScale(key, Number(e.target.value))} /></label>}
+              {!isCanada && key === 'experience' && openGaps[key] && (() => {
+                const sp = { ...defaultCvSettings.experienceSpacing, ...settings.experienceSpacing };
+                return (
+                  <div className="cvx-exp-spacing">
+                    <label className="cvx-check">
+                      <input type="checkbox" checked={sp.marginTopOn} onChange={(e) => setExperienceSpacing({ marginTopOn: e.target.checked })} />
+                      <span>{fr ? 'Marge haute' : 'Top margin'}</span>
+                    </label>
+                    <label className="cvx-zone-size"><span>{fr ? 'Valeur' : 'Value'} {sp.marginTop.toFixed(2)}rem</span><input type="range" min="0" max="2" step="0.02" value={sp.marginTop} disabled={!sp.marginTopOn} onChange={(e) => setExperienceSpacing({ marginTop: Number(e.target.value) })} /></label>
+                    <label className="cvx-check">
+                      <input type="checkbox" checked={sp.gapOn} onChange={(e) => setExperienceSpacing({ gapOn: e.target.checked })} />
+                      <span>{fr ? 'Espace entre lignes (gap)' : 'Line gap'}</span>
+                    </label>
+                    <label className="cvx-zone-size"><span>{fr ? 'Valeur' : 'Value'} {sp.gap.toFixed(2)}rem</span><input type="range" min="0" max="2" step="0.02" value={sp.gap} disabled={!sp.gapOn} onChange={(e) => setExperienceSpacing({ gap: Number(e.target.value) })} /></label>
+                  </div>
+                );
+              })()}
               </div>
+
             ))}
           </div>
 
           <div className="cvx-actions">
-            <button
+            {onSave && <button
               type="button"
               className="cvx-btn cvx-btn--primary"
               onClick={onSave}
               disabled={saveState === 'saving'}
             >
               <FontAwesomeIcon icon={['fas', 'floppy-disk']} /> {saveLabel}
-            </button>
+            </button>}
             <button type="button" className="cvx-btn" onClick={onReset}>
               <FontAwesomeIcon icon={['fas', 'rotate-left']} /> {fr ? 'Réinitialiser' : 'Reset'}
             </button>
@@ -901,7 +1256,13 @@ function PromptModal({ locale, resumeData, initialInstructions, onSave, onClose,
   const fr = locale === 'fr';
   const [instructions, setInstructions] = useState(initialInstructions || DEFAULT_PROMPT_INSTRUCTIONS);
   const [jobOffer, setJobOffer] = useState('');
-  const prompt = buildResumePrompt(JSON.stringify(getPromptResume(resumeData), null, 2), jobOffer, instructions);
+  const [experienceSeeds, setExperienceSeeds] = useState(() => loadExperienceSeeds(resumeData.experience));
+  const prompt = buildResumePrompt(
+    JSON.stringify(getPromptResume(resumeData), null, 2),
+    jobOffer,
+    instructions,
+    experienceSeeds,
+  );
 
   async function copyPrompt() {
     try {
@@ -924,6 +1285,47 @@ function PromptModal({ locale, resumeData, initialInstructions, onSave, onClose,
           <span>{fr ? "Offre d'emploi" : 'Job offer'}</span>
           <textarea rows="14" value={jobOffer} onChange={(event) => setJobOffer(event.target.value)} placeholder={fr ? "Collez l'offre complète ici" : 'Paste the full job offer here'} />
         </label>
+        <fieldset className="seed-experiences is-full">
+          <legend>Seeds</legend>
+          <p className="seed-experiences-hint">
+            {fr
+              ? 'Ajoutez les projets ou détails réellement réalisés pour chaque expérience. Chaque ligne enrichira uniquement l’expérience correspondante dans le prompt.'
+              : 'Add projects or details you actually worked on for each experience. Each line will enrich only its matching experience in the prompt.'}
+          </p>
+          <div className="seed-experiences-list">
+            {resumeData.experience.map((experience, index) => {
+              const seedKey = getExperienceSeedKey(experience, index);
+              const role = experience.role || (fr ? `Expérience ${index + 1}` : `Experience ${index + 1}`);
+              return (
+                <section className="seed-experience-card" key={seedKey}>
+                  <header className="seed-experience-heading">
+                    <span className="seed-experience-number">{String(index + 1).padStart(2, '0')}</span>
+                    <div className="seed-experience-title">
+                      <strong>{role}</strong>
+                      {experience.company && <span>{experience.company}</span>}
+                    </div>
+                  </header>
+                  <label className="service-field seed-experience-input">
+                    <span>{fr ? 'Projets et détails' : 'Projects and details'}</span>
+                    <textarea
+                      rows="3"
+                      value={experienceSeeds[seedKey] || ''}
+                      onChange={(event) => {
+                        const nextSeeds = { ...experienceSeeds, [seedKey]: event.target.value };
+                        setExperienceSeeds(nextSeeds);
+                        localStorage.setItem('resumePromptExperienceSeeds_v1', JSON.stringify(nextSeeds));
+                      }}
+                      placeholder={fr
+                        ? 'Décrivez les projets, tâches ou outils utilisés (une information par ligne).'
+                        : 'Describe projects, tasks, or tools used (one detail per line).'}
+                    />
+                  </label>
+                  {experience.period && <span className="seed-experience-period">{experience.period}</span>}
+                </section>
+              );
+            })}
+          </div>
+        </fieldset>
       </div>
       <label className="service-field">
         <span>{fr ? 'Prompt complet à copier' : 'Complete prompt to copy'}</span>
@@ -962,7 +1364,7 @@ function PostPasteResumeChoiceModal({ locale, onEditNow, onClose }) {
   );
 }
 
-const BASIC_FIELDS = ['firstName', 'lastName', 'title', 'tagline'];
+const BASIC_FIELDS = ['firstName', 'lastName', 'title', 'tagline', 'email', 'phone', 'location'];
 
 function ResumeEditorModal({ locale, resumeData, onSave, onReset, onClose, saveState, mode = 'default' }) {
   const fr = locale === 'fr';
@@ -977,6 +1379,12 @@ function ResumeEditorModal({ locale, resumeData, onSave, onReset, onClose, saveS
     ...prev,
     [section]: (prev[section] ?? []).map((item, itemIndex) => itemIndex === index ? { ...item, [field]: value } : item),
   }));
+  const updateContract = (index, contractIndex, field, value) => setDraft((prev) => ({
+    ...prev,
+    experience: (prev.experience ?? []).map((item, itemIndex) => itemIndex === index
+      ? { ...item, contracts: (item.contracts ?? []).map((contract, cIndex) => cIndex === contractIndex ? { ...contract, [field]: value } : contract) }
+      : item),
+  }));
   const addItem = (section, item) => setDraft((prev) => ({ ...prev, [section]: [...(prev[section] ?? []), item] }));
   const removeItem = (section, index) => setDraft((prev) => ({ ...prev, [section]: (prev[section] ?? []).filter((_, itemIndex) => itemIndex !== index) }));
 
@@ -987,13 +1395,20 @@ function ResumeEditorModal({ locale, resumeData, onSave, onReset, onClose, saveS
         <div className="editor-item" key={`${section}-${index}`}>
           <div className="editor-item-head"><strong>{item.name || item.title || item.role || item.degree || `${title} ${index + 1}`}</strong><button type="button" className="service-remove" onClick={() => removeItem(section, index)} aria-label={fr ? 'Supprimer' : 'Remove'}><FontAwesomeIcon icon={['fas', 'trash']} /></button></div>
           <div className="service-form-grid">
-            {fields.map(({ key, label, multiline, list }) => (
+            {fields.filter(({ key }) => !(section === 'experience' && Array.isArray(item.contracts) && key === 'period')).map(({ key, label, multiline, list }) => (
               <label className={`service-field ${multiline || list ? 'is-full' : ''}`} key={key}>
                 <span>{label}</span>
                 {multiline || list ? <textarea rows={multiline ? 4 : 3} value={list ? (item[key] ?? []).join('\n') : item[key] ?? ''} onChange={(event) => updateItem(section, index, key, list ? event.target.value.split('\n').map((value) => value.trim()).filter(Boolean) : event.target.value)} /> : <input value={item[key] ?? ''} onChange={(event) => updateItem(section, index, key, event.target.value)} />}
               </label>
             ))}
           </div>
+          {section === 'experience' && Array.isArray(item.contracts) && item.contracts.map((contract, contractIndex) => (
+            <div className="service-form-grid" key={`contract-${contractIndex}`}>
+              <label className="service-field"><span>{fr ? 'Type de contrat' : 'Contract type'}</span><input value={contract.contractType ?? ''} onChange={(event) => updateContract(index, contractIndex, 'contractType', event.target.value)} /></label>
+              <label className="service-field"><span>{fr ? 'Période' : 'Period'}</span><input value={contract.period ?? ''} onChange={(event) => updateContract(index, contractIndex, 'period', event.target.value)} /></label>
+              <label className="service-field is-full"><span>{fr ? `Missions du contrat ${contractIndex + 1}, une par ligne` : `Contract ${contractIndex + 1} bullets, one per line`}</span><textarea rows={3} value={(contract.bullets ?? []).join('\n')} onChange={(event) => updateContract(index, contractIndex, 'bullets', event.target.value.split('\n').map((value) => value.trim()).filter(Boolean))} /></label>
+            </div>
+          ))}
         </div>
       ))}
       <button type="button" className="cvx-btn" onClick={() => addItem(section, emptyItem)}><FontAwesomeIcon icon={['fas', 'plus']} /> {fr ? 'Ajouter' : 'Add'} {title.toLowerCase()}</button>
@@ -1005,9 +1420,20 @@ function ResumeEditorModal({ locale, resumeData, onSave, onReset, onClose, saveS
       <fieldset className="editor-section">
         <legend>{fr ? 'Informations personnelles' : 'Personal information'}</legend>
         <div className="service-form-grid">
-          {BASIC_FIELDS.map((field) => <label className="service-field" key={field}><span>{labels[field]}</span><input value={draft.basics?.[field] ?? ''} onChange={(event) => updateBasics(field, event.target.value)} /></label>)}
+          {BASIC_FIELDS.map((field) => <label className="service-field" key={field}><span>{labels[field]}</span><input type={field === 'email' ? 'email' : 'text'} value={draft.basics?.[field] ?? ''} onChange={(event) => updateBasics(field, event.target.value)} /></label>)}
           <label className="service-field is-full"><span>{fr ? 'Résumé professionnel' : 'Professional summary'}</span><textarea rows="4" value={draft.basics?.summary ?? ''} onChange={(event) => updateBasics('summary', event.target.value)} /></label>
           <label className="service-field is-full"><span>{fr ? 'Points forts, un par ligne' : 'Highlights, one per line'}</span><textarea rows="4" value={(draft.highlights ?? []).join('\n')} onChange={(event) => setDraft((prev) => ({ ...prev, highlights: event.target.value.split('\n').map((value) => value.trim()).filter(Boolean) }))} /></label>
+        </div>
+      </fieldset>
+      <fieldset className="editor-section">
+        <legend>{fr ? 'Titres des sections' : 'Section titles'}</legend>
+        <div className="service-form-grid">
+          {Object.entries(draft.labels ?? {}).map(([key, value]) => (
+            <label className="service-field" key={key}>
+              <span>{key}</span>
+              <input value={value ?? ''} onChange={(event) => setDraft((prev) => ({ ...prev, labels: { ...prev.labels, [key]: event.target.value } }))} />
+            </label>
+          ))}
         </div>
       </fieldset>
       {repeatable(fr ? 'Groupes de compétences' : 'Skill groups', 'skillGroups', [{ key: 'title', label: fr ? 'Groupe' : 'Group' }, { key: 'items', label: fr ? 'Compétences, une par ligne' : 'Skills, one per line', list: true }], { title: '', items: [] })}
@@ -1018,6 +1444,7 @@ function ResumeEditorModal({ locale, resumeData, onSave, onReset, onClose, saveS
           <textarea rows="3" value={(draft.softSkills ?? []).join('\n')} onChange={(event) => setDraft((prev) => ({ ...prev, softSkills: event.target.value.split('\n').map((value) => value.trim()).filter(Boolean) }))} />
         </label>
       </fieldset>
+      {repeatable(fr ? 'Langues' : 'Languages', 'languages', [{ key: 'name', label: fr ? 'Langue' : 'Language' }, { key: 'level', label: fr ? 'Niveau' : 'Level' }], { name: '', level: '' })}
       {repeatable(fr ? 'Expériences' : 'Experience', 'experience', [{ key: 'role', label: fr ? 'Poste' : 'Role' }, { key: 'company', label: fr ? 'Entreprise' : 'Company' }, { key: 'location', label: fr ? 'Lieu' : 'Location' }, { key: 'period', label: fr ? 'Période' : 'Period' }, { key: 'bullets', label: fr ? 'Missions, une par ligne' : 'Bullets, one per line', list: true }], { role: '', company: '', location: '', period: '', bullets: [] })}
       {repeatable(fr ? 'Formations' : 'Education', 'education', [{ key: 'degree', label: fr ? 'Diplôme' : 'Degree' }, { key: 'school', label: fr ? 'École' : 'School' }, { key: 'location', label: fr ? 'Lieu' : 'Location' }, { key: 'period', label: fr ? 'Période' : 'Period' }], { degree: '', school: '', location: '', period: '' })}
       {repeatable('Certifications', 'certifications', [{ key: 'name', label: fr ? 'Nom' : 'Name' }, { key: 'provider', label: fr ? 'Organisme' : 'Provider' }, { key: 'href', label: 'URL' }], { name: '', provider: '', href: '' })}
@@ -1033,6 +1460,7 @@ function JobInfo({ locale, job, onPrev, onNext, hasResume }) {
   const fr = locale === 'fr';
   const L = {
     heading: fr ? 'Poste ciblé' : 'Target job',
+    createdAt: fr ? 'Date de création' : 'Created on',
     prev: fr ? 'Précédent' : 'Previous',
     next: fr ? 'Suivant' : 'Next',
     missions: fr ? 'Missions' : 'Missions',
@@ -1048,6 +1476,14 @@ function JobInfo({ locale, job, onPrev, onNext, hasResume }) {
     chance: fr ? "Chances d'entretien" : 'Interview chance',
     assessment: fr ? 'Évaluation' : 'Assessment',
   };
+  const createdDate = job.createdAt ? new Date(job.createdAt) : null;
+  const formattedCreatedDate = createdDate && !Number.isNaN(createdDate.getTime())
+    ? createdDate.toLocaleDateString(fr ? 'fr-FR' : 'en-US', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    })
+    : '';
   const hasScore = typeof job.matchScore === 'number' && !Number.isNaN(job.matchScore);
   const scoreTone = !hasScore ? '' : job.matchScore >= 60 ? 'is-ok' : job.matchScore >= 35 ? 'is-warn' : 'is-bad';
   return (
@@ -1072,6 +1508,11 @@ function JobInfo({ locale, job, onPrev, onNext, hasResume }) {
       </header>
 
       <div className="jobinfo_meta">
+        {formattedCreatedDate && (
+          <span className="jobinfo_pill">
+            <FontAwesomeIcon icon={['fas', 'calendar-day']} /> {L.createdAt}: {formattedCreatedDate}
+          </span>
+        )}
         <span className={`jobinfo_pill ${hasResume ? 'is-ok' : 'is-warn'}`}>
           {hasResume ? L.cvUsed : L.noCv}
         </span>
@@ -1152,7 +1593,611 @@ function JobInfo({ locale, job, onPrev, onNext, hasResume }) {
   );
 }
 
-function ApplicationPageHeader({ locale, job, format, onFormatChange, onHome, onDetails }) {
+const LETTER_PARAGRAPH_COUNT = 5;
+const LETTER_FONT_PT = 10.5;
+
+const LETTER_BLOCKS = [
+  { key: 'header', fr: 'En-tête', en: 'Header' },
+  { key: 'subject', fr: 'Objet', en: 'Subject' },
+  { key: 'salutation', fr: "Formule d'appel", en: 'Salutation' },
+  { key: 'part1', fr: '1 · Qui je suis', en: '1 · About me' },
+  { key: 'part2', fr: '2 · Ce que je propose', en: '2 · What I offer' },
+  { key: 'part3', fr: "3 · L'entreprise vue par moi", en: '3 · The company from my view' },
+  { key: 'part4', fr: '4 · Nous deux', en: '4 · Us together' },
+  { key: 'part5', fr: '5 · Remerciements', en: '5 · Thank you' },
+  { key: 'signoff', fr: 'Formule de politesse', en: 'Closing' },
+  { key: 'signature', fr: 'Signature', en: 'Signature' },
+];
+
+const defaultLetterSettings = {
+  fontScale: 1,
+  accent: '#12467c',
+  lineHeight: 1.6,
+  visible: Object.fromEntries(LETTER_BLOCKS.map((block) => [block.key, true])),
+  sectionScale: Object.fromEntries(LETTER_BLOCKS.map((block) => [block.key, 1])),
+};
+
+function mergeLetterSettings(saved = {}) {
+  return {
+    ...defaultLetterSettings,
+    ...saved,
+    visible: { ...defaultLetterSettings.visible, ...(saved.visible ?? {}) },
+    sectionScale: { ...defaultLetterSettings.sectionScale, ...(saved.sectionScale ?? {}) },
+  };
+}
+
+const DEFAULT_LETTER_PROMPT_INSTRUCTIONS = `You are an experienced career writer who helps people write cover letters (lettres de motivation) that sound like they were written by a real person, not by a template or an AI.
+
+## Your task
+Write ONE cover letter for the candidate. Use only the job offer and the candidate resume provided at the bottom. Use the default cover letter only as a reference for structure and tone: rewrite everything and never copy its sentences.
+
+## Language
+- Choose the letter language from the candidate resume JSON below, not from the job offer: if that resume is written in English, write the whole letter in English, otherwise write it in French.
+- Write the whole letter in that one language, with natural, correct grammar and punctuation.
+
+## Structure: exactly 5 body paragraphs, in this order
+1. About me: who the candidate is, their background and what drives them. Use one or two concrete facts from the resume.
+2. What I offer: what the candidate concretely brings to the company, matched to the requirements of the job. Balance relevant technical experience with non-technical contributions such as teamwork, communication, understanding needs, documentation, coordination, autonomy or ownership. Use only examples supported by the resume or job offer, and avoid turning this paragraph into a list of tools.
+3. The company from my point of view: why this company and this role interest the candidate, based on the job offer (mission, product, projects, team, values, stack). Do not invent facts about the company. If the offer says little, stay general and honest.
+4. Us together: how the candidate would contribute to the team beyond writing code or building technical solutions. Connect their working style, collaboration and delivery responsibilities to the role and challenges described in the offer, using only supported facts.
+5. Thank you: a short, sincere closing paragraph that thanks the reader for their time and suggests a conversation or an interview.
+
+## Writing style: it must sound human
+- Write like a thoughtful person writing to someone they respect: clear, warm, direct, confident without bragging.
+- Vary sentence length. Mix short and longer sentences.
+- Be specific instead of general. Prefer a concrete fact over an adjective.
+- Keep the letter focused on the candidate's overall contribution, not just technology. Mention technologies only when they help explain an achievement or match a key requirement, and give comparable attention to how the candidate works with people and helps projects move forward.
+- Avoid clichés and filler. Never use phrases such as: "je suis passionné", "fort de", "je me permets", "au sein d'une entreprise", "dans un monde en constante évolution", "je suis convaincu que", "votre entreprise leader", "I am passionate about", "I am writing to express my interest", "I would be a perfect fit", "in today's fast-paced world", "dynamic team", "synergy", "leverage".
+- No em dashes, no bullet points, no headings inside the paragraphs.
+- Do not use colons (:) or semicolons (;) anywhere in the letter. Split the idea into two sentences instead.
+- No emojis, icons, arrows, asterisks, hashtags or decorative symbols. Plain sentences and normal punctuation only (period, comma, question mark, apostrophe, parentheses).
+- Length: about 250 to 330 words across the 5 paragraphs, 2 to 4 sentences per paragraph.
+- No flattery about the company unless it is stated in the offer.
+
+## Facts
+- Use only facts found in the resume and the job offer. Never invent employers, dates, tools, numbers, diplomas or projects.
+- If the offer asks for something the resume does not show, leave it out instead of claiming it.
+- Keep company names, job titles and technologies exactly as written in the sources.
+
+## Output format
+Return ONLY one valid JSON object, with no markdown fences and no text before or after it:
+{
+  "letter": {
+    "language": "en if the candidate resume is in English, otherwise fr",
+    "company": "company name from the offer",
+    "jobTitle": "job title from the offer",
+    "location": "job location from the offer, or empty string",
+    "url": "job offer URL if present, otherwise empty string",
+    "subject": "short subject line, for example: Candidature au poste de Data Engineer",
+    "salutation": "for example: Madame, Monsieur, or Dear Hiring Manager,",
+    "body": [
+      "paragraph 1: about me",
+      "paragraph 2: what I offer",
+      "paragraph 3: the company from my point of view",
+      "paragraph 4: us together",
+      "paragraph 5: thank you"
+    ],
+    "signoff": "for example: Cordialement, or Best regards,"
+  }
+}
+- "body" must contain exactly 5 non-empty strings.
+- Do not add the candidate's name, address or contact details in the body. The app adds them.
+- Escape double quotes inside strings. No trailing commas.`;
+
+function getDefaultLetter(locale) {
+  if (locale === 'fr') {
+    return {
+      locale: 'fr',
+      company: '[Entreprise]',
+      jobTitle: '[Poste]',
+      location: '',
+      url: '',
+      subject: 'Candidature au poste de [Poste] chez [Entreprise]',
+      salutation: 'Madame, Monsieur,',
+      body: [
+        "Je suis [titre professionnel], et mon parcours tourne autour de [domaine principal]. Ce qui me motive au quotidien, c'est de transformer des données brutes en outils fiables que les équipes utilisent vraiment. [Ajoutez une ou deux réalisations concrètes tirées de votre CV.]",
+        "Je peux apporter à [Entreprise] une expérience en [domaine utile au poste], ainsi qu'une façon de travailler fondée sur [qualité ou responsabilité attestée par le CV]. Sur [projet ou mission], j'ai [contribution ou résultat concret]. J'accorde aussi de l'importance à la communication, au partage d'informations et au suivi des sujets avec l'équipe.",
+        "Ce qui m'attire chez [Entreprise], c'est [élément précis tiré de l'offre : produit, projets, valeurs ou équipe]. Je retrouve cette façon de travailler dans [ce que vous avez observé], et c'est le type d'environnement dans lequel je veux progresser.",
+        "Je pense que mon profil et le poste de [Poste] se rejoignent sur [point commun]. J'aimerais contribuer aux projets en apportant à la fois mes compétences métier et ma capacité à collaborer, clarifier les besoins et assurer un suivi fiable. Je serais heureux de construire cette dynamique avec votre équipe.",
+        "Je vous remercie sincèrement du temps que vous consacrez à la lecture de ma candidature. Je serais ravi d'échanger avec vous lors d'un entretien pour approfondir ces points.",
+      ],
+      signoff: 'Cordialement,',
+    };
+  }
+
+  return {
+    locale: 'en',
+    company: '[Company]',
+    jobTitle: '[Job title]',
+    location: '',
+    url: '',
+    subject: 'Application for the [Job title] position at [Company]',
+    salutation: 'Dear Hiring Manager,',
+    body: [
+      "I'm a [professional title], and most of my work so far has been about [main field]. What keeps me interested is turning messy data into tools people actually rely on. [Add one or two concrete achievements from your resume.]",
+      "I can bring [relevant experience] to [Company], along with a way of working grounded in [resume-supported quality or responsibility]. On [project or mission], I [concrete contribution or result]. I also value clear communication, sharing context and following through with the team.",
+      "What draws me to [Company] is [specific point from the offer: product, projects, values or team]. I recognise that way of working in [what you observed], and it is the kind of environment where I want to keep growing.",
+      "I think my background and the [Job title] role meet on [common ground]. I would like to contribute both my professional skills and my ability to collaborate, clarify needs and follow work through reliably. I would be glad to build that kind of working relationship with your team.",
+      "Thank you for taking the time to read my application. I would be glad to talk with you in an interview and go deeper into any of these points.",
+    ],
+    signoff: 'Best regards,',
+  };
+}
+
+function loadDefaultLetter(locale) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(`defaultLetter_${locale}`) || 'null');
+    if (saved && Array.isArray(saved.body) && saved.body.length === LETTER_PARAGRAPH_COUNT) {
+      return { ...getDefaultLetter(locale), ...saved };
+    }
+  } catch {
+    // Fall back to the built-in template when the stored letter is unreadable.
+  }
+  return getDefaultLetter(locale);
+}
+
+// Accepts `{ "letter": {...} }` or the letter object itself and returns a clean letter, or null.
+function normalizeLetterPayload(source) {
+  const letter = source && typeof source === 'object' && source.letter && typeof source.letter === 'object'
+    ? source.letter
+    : source;
+  if (!letter || typeof letter !== 'object' || Array.isArray(letter)) return null;
+
+  const body = Array.isArray(letter.body) ? letter.body.map((p) => String(p ?? '').trim()) : [];
+  const data = {
+    company: String(letter.company ?? '').trim(),
+    jobTitle: String(letter.jobTitle ?? '').trim(),
+    location: String(letter.location ?? '').trim(),
+    url: String(letter.url ?? '').trim(),
+    subject: String(letter.subject ?? '').trim(),
+    salutation: String(letter.salutation ?? '').trim(),
+    body,
+    signoff: String(letter.signoff ?? '').trim(),
+    locale: letter.language === 'en' ? 'en' : 'fr',
+  };
+  return data.company && body.length === LETTER_PARAGRAPH_COUNT && body.every(Boolean) ? data : null;
+}
+
+function buildJobOfferText(app) {
+  const header = [
+    `Poste / Job title: ${app.title ?? ''}`,
+    `Entreprise / Company: ${app.company ?? ''}`,
+    app.location ? `Lieu / Location: ${app.location}` : '',
+    app.url ? `Lien / URL: ${app.url}` : '',
+  ].filter(Boolean).join('\n');
+  const details = app.jobDescription?.trim()
+    ? app.jobDescription.trim()
+    : [app.summary, ...(app.missions ?? []), ...(app.requirements ?? [])].filter(Boolean).join('\n');
+  return [header, details].filter(Boolean).join('\n\n');
+}
+
+function buildLetterPrompt({ instructions, jobOffer, resumeJson, defaultLetter }) {
+  return `${instructions.trim()}
+
+## Job offer
+${jobOffer.trim() || '(paste the job offer here)'}
+
+## Candidate resume (JSON)
+${resumeJson}
+
+## Default cover letter (reference for structure and tone only, rewrite it)
+${defaultLetter}
+`;
+}
+
+function letterToPlainText(letter, candidateName = '') {
+  return [letter.subject, letter.salutation, ...letter.body, letter.signoff, candidateName]
+    .filter(Boolean)
+    .join('\n\n');
+}
+
+function LetterView({ locale, resumeData, letter, settings }) {
+  const fr = locale === 'fr';
+
+  const contactItems = getContactItems(resumeData);
+  const candidateName = `${resumeData.basics.firstName} ${resumeData.basics.lastName}`;
+  const candidateTitle = resumeData.basics.title || 'Data Engineer';
+  const isVisible = (key) => settings.visible[key] !== false;
+  const blockStyle = (key) => ({ '--block-scale': settings.sectionScale[key] ?? 1 });
+
+  return (
+    <div className="cover-letter-wrapper">
+      <div className="cover-letter-preview">
+        <div
+          className="cover-letter"
+          id="area-cover-letter"
+          style={{
+            '--letter-font-scale': settings.fontScale,
+            '--letter-line-height': settings.lineHeight,
+            '--accent': settings.accent,
+          }}
+        >
+          {isVisible('header') && (
+            <header className="cl-header" style={blockStyle('header')}>
+              <div className="cl-header-main">
+                <h1 className="cl-name">{candidateName}</h1>
+                <div className="cl-title">{candidateTitle}</div>
+              </div>
+              <div className="cl-contact-list">
+                {contactItems.map((item) => (
+                  <span className="cl-contact-item" key={item.value}>
+                    <FontAwesomeIcon icon={['fas', item.icon]} className="cl-contact-icon" />
+                    <span>{item.value}</span>
+                  </span>
+                ))}
+                {resumeData.links?.map((link) => (
+                  <span className="cl-contact-item" key={link.label}>
+                    <FontAwesomeIcon icon={getLinkIcon(link)} className="cl-contact-icon" />
+                    <span>{link.value}</span>
+                  </span>
+                ))}
+              </div>
+            </header>
+          )}
+
+          <div className="cl-divider" />
+
+          <div className="cl-body">
+            {isVisible('subject') && letter.subject && (
+              <div className="cl-subject-line" style={blockStyle('subject')}>
+                <strong>{letter.subject}</strong>
+              </div>
+            )}
+            {isVisible('salutation') && letter.salutation && (
+              <p className="cl-paragraph is-salutation" style={blockStyle('salutation')}>
+                {letter.salutation}
+              </p>
+            )}
+            {letter.body.map((paragraph, index) => {
+              const key = `part${index + 1}`;
+              if (!isVisible(key)) return null;
+              return (
+                <p className="cl-paragraph" key={key} style={blockStyle(key)}>
+                  {paragraph}
+                </p>
+              );
+            })}
+            {isVisible('signoff') && letter.signoff && (
+              <p className="cl-paragraph is-closing" style={blockStyle('signoff')}>
+                {letter.signoff}
+              </p>
+            )}
+          </div>
+
+          {isVisible('signature') && (
+            <footer className="cl-signature-block" style={blockStyle('signature')}>
+              <div className="cl-signature-name">{candidateName}</div>
+              <div className="cl-signature-title">{candidateTitle}</div>
+            </footer>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LetterEditorModal({ locale, letter, onSave, onClose }) {
+  const fr = locale === 'fr';
+  const [draft, setDraft] = useState(() => ({
+    ...letter,
+    body: [...letter.body],
+  }));
+
+  const setField = (field) => (e) => setDraft((prev) => ({ ...prev, [field]: e.target.value }));
+  const setPart = (index) => (e) => {
+    const value = e.target.value;
+    setDraft((prev) => ({ ...prev, body: prev.body.map((p, i) => (i === index ? value : p)) }));
+  };
+  const canSave = Boolean(draft.company.trim()) && draft.body.every((p) => p.trim());
+
+  return (
+    <ServiceModal
+      title={fr ? 'Modifier la lettre de motivation' : 'Edit cover letter'}
+      onClose={onClose}
+      wide
+    >
+      <div className="service-form-grid">
+        <label className="service-field">
+          <span>{fr ? 'Entreprise *' : 'Company *'}</span>
+          <input value={draft.company} onChange={setField('company')} />
+        </label>
+        <label className="service-field">
+          <span>{fr ? 'Poste' : 'Job title'}</span>
+          <input value={draft.jobTitle} onChange={setField('jobTitle')} />
+        </label>
+        <label className="service-field">
+          <span>{fr ? 'Lieu' : 'Location'}</span>
+          <input value={draft.location} onChange={setField('location')} />
+        </label>
+        <label className="service-field">
+          <span>{fr ? 'Lien de l’offre' : 'Offer URL'}</span>
+          <input value={draft.url} onChange={setField('url')} />
+        </label>
+        <label className="service-field is-full">
+          <span>{fr ? 'Objet' : 'Subject'}</span>
+          <input value={draft.subject} onChange={setField('subject')} />
+        </label>
+        <label className="service-field is-full">
+          <span>{fr ? "Formule d'appel" : 'Salutation'}</span>
+          <input value={draft.salutation} onChange={setField('salutation')} />
+        </label>
+        {draft.body.map((paragraph, index) => {
+          const block = LETTER_BLOCKS.find((b) => b.key === `part${index + 1}`);
+          return (
+            <label className="service-field is-full" key={block.key}>
+              <span>{fr ? block.fr : block.en}</span>
+              <textarea
+                rows="5"
+                className="cl-editor-textarea"
+                value={paragraph}
+                onChange={setPart(index)}
+              />
+            </label>
+          );
+        })}
+        <label className="service-field is-full">
+          <span>{fr ? 'Formule de politesse' : 'Closing'}</span>
+          <input value={draft.signoff} onChange={setField('signoff')} />
+        </label>
+      </div>
+      <footer className="service-modal-actions sticky-actions">
+        <button type="button" className="cvx-btn" onClick={onClose}>
+          {fr ? 'Annuler' : 'Cancel'}
+        </button>
+        <button
+          type="button"
+          className="cvx-btn cvx-btn--primary"
+          disabled={!canSave}
+          onClick={() => {
+            onSave(draft);
+            onClose();
+          }}
+        >
+          <FontAwesomeIcon icon={['fas', 'floppy-disk']} /> {fr ? 'Enregistrer la lettre' : 'Save cover letter'}
+        </button>
+      </footer>
+    </ServiceModal>
+  );
+}
+
+function LetterPromptModal({ locale, resumeData, defaultLetter, initialInstructions, onSave, onClose, onCopied }) {
+  const fr = locale === 'fr';
+  const [instructions, setInstructions] = useState(initialInstructions || DEFAULT_LETTER_PROMPT_INSTRUCTIONS);
+  const [applications, setApplications] = useState([]);
+  const [selectedId, setSelectedId] = useState('');
+  const [jobOffer, setJobOffer] = useState('');
+  const [resumeJson, setResumeJson] = useState(() => JSON.stringify(getPromptResume(resumeData), null, 2));
+  const defaultLetterText = letterToPlainText(defaultLetter, `${resumeData.basics.firstName} ${resumeData.basics.lastName}`);
+  const prompt = buildLetterPrompt({ instructions, jobOffer, resumeJson, defaultLetter: defaultLetterText });
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/applications')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (active && Array.isArray(data)) setApplications(data);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  function chooseCandidature(id) {
+    setSelectedId(id);
+    const app = applications.find((item) => item.id === id);
+    if (!app) return;
+    setJobOffer(buildJobOfferText(app));
+    let appResume = null;
+    try {
+      appResume = JSON.parse(app.resumeJson || 'null');
+    } catch {
+      appResume = null;
+    }
+    setResumeJson(
+      JSON.stringify(getPromptResume(isValidResumeData(appResume) ? appResume : resumeData), null, 2),
+    );
+  }
+
+  async function copyPrompt() {
+    try {
+      await navigator.clipboard.writeText(prompt);
+      onCopied(fr ? 'Prompt de lettre copié !' : 'Cover letter prompt copied!');
+      onClose();
+    } catch {
+      onCopied(fr ? 'Copie impossible' : 'Copy failed');
+    }
+  }
+
+  return (
+    <ServiceModal title={fr ? 'Prompt de la lettre de motivation' : 'Cover letter prompt'} onClose={onClose} wide>
+      <div className="service-form-grid prompt-grid">
+        <label className="service-field">
+          <span>{fr ? 'Instructions du prompt' : 'Prompt instructions'}</span>
+          <textarea rows="14" value={instructions} onChange={(event) => setInstructions(event.target.value)} />
+        </label>
+        <div className="service-field">
+          <span>{fr ? 'Candidature' : 'Candidature'}</span>
+          <select className="letter-select" value={selectedId} onChange={(e) => chooseCandidature(e.target.value)}>
+            <option value="">{fr ? 'Choisir une candidature (optionnel)' : 'Pick a candidature (optional)'}</option>
+            {applications.map((app) => (
+              <option key={app.id} value={app.id}>
+                {[app.company, app.title].filter(Boolean).join(' · ') || app.id}
+              </option>
+            ))}
+          </select>
+          <textarea rows="11" value={jobOffer} onChange={(event) => setJobOffer(event.target.value)} placeholder={fr ? "Collez l'offre complète ici" : 'Paste the full job offer here'} />
+        </div>
+      </div>
+      <label className="service-field">
+        <span>{fr ? 'Prompt complet à copier' : 'Complete prompt to copy'}</span>
+        <textarea className="prompt-preview" rows="9" value={prompt} readOnly />
+      </label>
+      <footer className="service-modal-actions">
+        <button type="button" className="cvx-btn" onClick={() => { setInstructions(DEFAULT_LETTER_PROMPT_INSTRUCTIONS); onSave(DEFAULT_LETTER_PROMPT_INSTRUCTIONS); }}>{fr ? 'Prompt par défaut' : 'Default prompt'}</button>
+        <button type="button" className="cvx-btn" onClick={() => onSave(instructions)}><FontAwesomeIcon icon={['fas', 'floppy-disk']} /> {fr ? 'Enregistrer le prompt' : 'Save prompt'}</button>
+        <button type="button" className="cvx-btn cvx-btn--primary" onClick={copyPrompt}><FontAwesomeIcon icon={['fas', 'copy']} /> {fr ? 'Copier tout' : 'Copy all'}</button>
+      </footer>
+    </ServiceModal>
+  );
+}
+
+const LETTER_SECTION_LABEL = (block, fr) => (fr ? block.fr : block.en);
+
+function LetterCustomizer({ locale, open, onToggle, settings, onSettingsChange, onSave, onReset, saveState }) {
+  const fr = locale === 'fr';
+  const [hex, setHex] = useState('');
+
+  const patch = (next) => onSettingsChange({ ...settings, ...next });
+  const setVisible = (key, val) =>
+    onSettingsChange({ ...settings, visible: { ...settings.visible, [key]: val } });
+  const setSectionScale = (key, val) =>
+    onSettingsChange({ ...settings, sectionScale: { ...settings.sectionScale, [key]: val } });
+
+  function applyHex() {
+    const value = hex.trim();
+    if (!HEX_RE.test(value)) return;
+    const full =
+      value.length === 4
+        ? `#${value[1]}${value[1]}${value[2]}${value[2]}${value[3]}${value[3]}`
+        : value;
+    patch({ accent: full });
+    setHex('');
+  }
+
+  const saveLabel =
+    saveState === 'saving'
+      ? fr ? 'Enregistrement…' : 'Saving…'
+      : saveState === 'saved'
+        ? fr ? 'Enregistré !' : 'Saved!'
+        : saveState === 'error'
+          ? fr ? 'Échec' : 'Failed'
+          : fr ? 'Enregistrer' : 'Save';
+
+  return (
+    <>
+      <button
+        type="button"
+        className={`cvx-fab ${open ? 'is-open' : ''}`}
+        onClick={onToggle}
+        aria-label={fr ? 'Personnaliser la lettre' : 'Customize cover letter'}
+        aria-expanded={open}
+      >
+        <FontAwesomeIcon icon={['fas', open ? 'xmark' : 'sliders']} />
+      </button>
+      {open && (
+        <div className="cvx-panel" role="dialog" aria-label={fr ? 'Personnalisation de la lettre' : 'Cover letter customization'}>
+          <div className="cvx-block">
+            <h3 className="cvx-title">{fr ? 'Taille du texte' : 'Text size'}</h3>
+            <div className="cvx-row">
+              <input
+                type="range"
+                min="0.8"
+                max="1.15"
+                step="0.01"
+                value={settings.fontScale}
+                onChange={(e) => patch({ fontScale: Number(e.target.value) })}
+              />
+              <span className="cvx-value">
+                {Math.round(settings.fontScale * 100)}% · {(settings.fontScale * LETTER_FONT_PT).toFixed(1)}pt
+              </span>
+            </div>
+          </div>
+
+          <div className="cvx-block">
+            <h3 className="cvx-title">{fr ? 'Interligne' : 'Line spacing'}</h3>
+            <div className="cvx-row">
+              <input
+                type="range"
+                min="1.3"
+                max="2"
+                step="0.05"
+                value={settings.lineHeight}
+                onChange={(e) => patch({ lineHeight: Number(e.target.value) })}
+              />
+              <span className="cvx-value">{settings.lineHeight.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div className="cvx-block">
+            <h3 className="cvx-title">{fr ? 'Couleur' : 'Color'}</h3>
+            <div className="cvx-swatches">
+              {COLOR_PRESETS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  className={`cvx-swatch ${settings.accent.toLowerCase() === c.toLowerCase() ? 'is-active' : ''}`}
+                  style={{ background: c }}
+                  onClick={() => patch({ accent: c })}
+                  aria-label={c}
+                />
+              ))}
+            </div>
+            <div className="cvx-row">
+              <input
+                className="cvx-input"
+                type="text"
+                value={hex}
+                onChange={(e) => setHex(e.target.value)}
+                placeholder="#1a2b3c"
+              />
+              <button type="button" className="cvx-btn" onClick={applyHex}>
+                {fr ? 'Ajouter' : 'Add'}
+              </button>
+            </div>
+          </div>
+
+          <div className="cvx-block">
+            <h3 className="cvx-title">{fr ? 'Blocs & tailles' : 'Blocks & sizes'}</h3>
+            {LETTER_BLOCKS.map((block) => (
+              <div className="cvx-section-control" key={block.key}>
+                <div className="cvx-field-row">
+                  <label className="cvx-check">
+                    <input
+                      type="checkbox"
+                      checked={settings.visible[block.key] !== false}
+                      onChange={(e) => setVisible(block.key, e.target.checked)}
+                    />
+                    <span>{LETTER_SECTION_LABEL(block, fr)}</span>
+                  </label>
+                </div>
+                <label className="cvx-zone-size">
+                  <span>
+                    {fr ? 'Taille' : 'Size'} {Math.round((settings.sectionScale[block.key] ?? 1) * 100)}% · {((settings.sectionScale[block.key] ?? 1) * settings.fontScale * LETTER_FONT_PT).toFixed(1)}pt
+                  </span>
+                  <input
+                    type="range"
+                    min="0.75"
+                    max="1.3"
+                    step="0.01"
+                    value={settings.sectionScale[block.key] ?? 1}
+                    onChange={(e) => setSectionScale(block.key, Number(e.target.value))}
+                  />
+                </label>
+              </div>
+            ))}
+          </div>
+
+          <div className="cvx-actions">
+            <button
+              type="button"
+              className="cvx-btn cvx-btn--primary"
+              onClick={onSave}
+              disabled={saveState === 'saving'}
+            >
+              <FontAwesomeIcon icon={['fas', 'floppy-disk']} /> {saveLabel}
+            </button>
+            <button type="button" className="cvx-btn" onClick={onReset}>
+              <FontAwesomeIcon icon={['fas', 'rotate-left']} /> {fr ? 'Réinitialiser' : 'Reset'}
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function ApplicationPageHeader({ locale, job, format, onFormatChange, onHome, onDetails, onDelete }) {
   return (
     <header className="application-page-header">
       <div>
@@ -1173,6 +2218,10 @@ function ApplicationPageHeader({ locale, job, format, onFormatChange, onHome, on
           <FontAwesomeIcon icon={['fas', 'circle-info']} />
           <span>{locale === 'fr' ? 'Détails' : 'Details'}</span>
         </button>
+        <button type="button" className="action_button application-delete-button" onClick={onDelete}>
+          <FontAwesomeIcon icon={['fas', 'trash']} />
+          <span>{locale === 'fr' ? 'Supprimer la candidature' : 'Delete application'}</span>
+        </button>
         <button type="button" className="action_button action_button_primary" onClick={onHome}>
           <FontAwesomeIcon icon={['fas', 'house']} />
           <span>{locale === 'fr' ? 'Retour au CV par défaut' : 'Back to default resume'}</span>
@@ -1185,7 +2234,6 @@ function ApplicationPageHeader({ locale, job, format, onFormatChange, onHome, on
 function AppCustome() {
   const [locale, setLocale] = useState('fr');
   const [page, setPage] = useState('cv');
-  const [overrides, setOverrides] = useState({});
   const [jsonError, setJsonError] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -1193,30 +2241,78 @@ function AppCustome() {
   const [cvSettings, setCvSettings] = useState(defaultCvSettings);
   const [cvPanelOpen, setCvPanelOpen] = useState(false);
   const [resumeEditorOpen, setResumeEditorOpen] = useState(false);
+  const [letterEditorOpen, setLetterEditorOpen] = useState(false);
+  const [letterPromptOpen, setLetterPromptOpen] = useState(false);
+  const [letterPanelOpen, setLetterPanelOpen] = useState(false);
+  const [letterSaveState, setLetterSaveState] = useState('');
+  const [letters, setLetters] = useState([]);
+  const [activeLetterId, setActiveLetterId] = useState(null);
+  const [defaultLetter, setDefaultLetter] = useState(() => loadDefaultLetter(locale));
+  const [letterSettings, setLetterSettings] = useState(defaultLetterSettings);
+  const [letterPromptInstructions, setLetterPromptInstructions] = useState(() => localStorage.getItem('coverLetterPromptInstructions') || DEFAULT_LETTER_PROMPT_INSTRUCTIONS);
   const [promptOpen, setPromptOpen] = useState(false);
-  const [promptInstructions, setPromptInstructions] = useState(() => localStorage.getItem('resumePromptInstructions') || DEFAULT_PROMPT_INSTRUCTIONS);
+  const [promptInstructions, setPromptInstructions] = useState(() => localStorage.getItem('resumePromptInstructions_v3') || DEFAULT_PROMPT_INSTRUCTIONS);
   const [cvSaveState, setCvSaveState] = useState('');
   const [activeJob, setActiveJob] = useState(null);
   const [jobDetailsOpen, setJobDetailsOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deletingApplication, setDeletingApplication] = useState(false);
   const [jobResume, setJobResume] = useState(null);
   const [jobList, setJobList] = useState([]);
   const [applicationFormat, setApplicationFormat] = useState('cv');
+  const [defaultFormat, setDefaultFormat] = useState('cv');
+  const [defaultResumeRevision, setDefaultResumeRevision] = useState(0);
 
   const baseResume = locale === 'fr' ? resumeDataFr : resumeDataEn;
   const baseCanada = locale === 'fr' ? resumeDataCanadaFr : resumeDataCanadaEn;
   const isApplicationPage = page === 'application';
-  const isCanadaView = page === 'canada' || (isApplicationPage && applicationFormat === 'canada');
+  const isCanadaView = (isApplicationPage || page === 'cv') && (isApplicationPage ? applicationFormat : defaultFormat) === 'canada';
+  const hasOwnSettings = isApplicationPage || isCanadaView;
   const overrideKey = isCanadaView ? `canada-${locale}` : `cv-${locale}`;
+  const loadSavedDefaultResume = (base, canada = false) => {
+    const key = `defaultResume_${canada ? 'canada-' : ''}${locale}`;
+    try {
+      const saved = JSON.parse(localStorage.getItem(key) || 'null');
+      return isValidResumeData(saved) ? normalizeResumeData(base, saved) : base;
+    } catch {
+      return base;
+    }
+  };
+  void defaultResumeRevision;
   const displayResume = normalizeResumeData(
     baseResume,
-    isApplicationPage ? jobResume ?? baseResume : overrides[`cv-${locale}`] ?? baseResume,
+    isApplicationPage ? jobResume ?? baseResume : loadSavedDefaultResume(baseResume, false),
   );
   const displayCanada = normalizeResumeData(
     baseCanada,
-    isApplicationPage ? jobResume ?? baseCanada : overrides[`canada-${locale}`] ?? baseCanada,
+    isApplicationPage ? jobResume ?? baseCanada : loadSavedDefaultResume(baseCanada, true),
   );
 
   const activeData = isCanadaView ? displayCanada : displayResume;
+  const isLetterPage = page === 'cover-letter';
+  const activeLetter = letters.find((item) => item.id === activeLetterId) ?? null;
+  const displayedLetter = activeLetter ?? defaultLetter;
+
+  useEffect(() => {
+    const resumeElement = document.getElementById(page === 'cover-letter' ? 'area-cover-letter' : 'area-cv');
+    if (!resumeElement) return undefined;
+
+    const updateOverflowState = () => {
+      const a4HeightPx = (297 / 25.4) * 96;
+      resumeElement.classList.toggle('is-overflowing', resumeElement.scrollHeight > a4HeightPx + 1);
+    };
+
+    updateOverflowState();
+    const observer = new ResizeObserver(updateOverflowState);
+    observer.observe(resumeElement);
+    const contentObserver = new MutationObserver(updateOverflowState);
+    contentObserver.observe(resumeElement, { childList: true, characterData: true, subtree: true });
+
+    return () => {
+      observer.disconnect();
+      contentObserver.disconnect();
+    };
+  }, [activeJob, applicationFormat, page]);
 
   // Update document metadata so the printed PDF gets a meaningful title
   // and keywords (most browsers include the title in PDF metadata).
@@ -1241,21 +2337,29 @@ function AppCustome() {
 
   function handleDownload() {
     const previousTitle = document.title;
-    const format = isCanadaView ? 'Canadian_Resume' : 'Resume';
-    const resumeElement = document.getElementById('area-cv');
+    const isCoverLetter = page === 'cover-letter';
+    const targetElementId = isCoverLetter ? 'area-cover-letter' : 'area-cv';
+    const printElement = document.getElementById(targetElementId);
+    const format = isCoverLetter
+      ? (displayedLetter.company ? `Cover_Letter_${displayedLetter.company.replace(/\s+/g, '_')}` : 'Cover_Letter')
+      : (isCanadaView ? 'Canadian_Resume' : 'Resume');
     const a4HeightPx = (297 / 25.4) * 96;
-    const contentHeight = resumeElement?.scrollHeight ?? a4HeightPx;
+    const contentHeight = printElement?.scrollHeight ?? a4HeightPx;
     const printScale = Math.min(1, a4HeightPx / contentHeight);
 
-    resumeElement?.style.setProperty('--print-scale', String(printScale));
-    resumeElement?.style.setProperty('--print-width', `${210 / printScale}mm`);
-    resumeElement?.style.setProperty('--print-min-height', `${297 / printScale}mm`);
+    printElement?.style.setProperty('--print-scale', String(printScale));
+    printElement?.style.setProperty('--print-width', `${210 / printScale}mm`);
+    printElement?.style.setProperty('--print-min-height', `${297 / printScale}mm`);
     document.title = `${activeData.basics.firstName}_${activeData.basics.lastName}_${format}_${locale.toUpperCase()}`;
     window.addEventListener('afterprint', () => {
       document.title = previousTitle;
-      resumeElement?.style.removeProperty('--print-scale');
-      resumeElement?.style.removeProperty('--print-width');
-      resumeElement?.style.removeProperty('--print-min-height');
+      printElement?.style.removeProperty('--print-scale');
+      printElement?.style.removeProperty('--print-width');
+      printElement?.style.removeProperty('--print-min-height');
+      if (!hasOwnSettings && !isLetterPage) {
+        setCvSettings(defaultCvSettings);
+        setCvPanelOpen(false);
+      }
     }, { once: true });
     window.print();
   }
@@ -1271,13 +2375,158 @@ function AppCustome() {
     }
   }
 
+  useEffect(() => {
+    let active = true;
+    fetch('/api/cover-letters')
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => {
+        if (active && Array.isArray(data)) setLetters(data);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    setDefaultLetter(loadDefaultLetter(locale));
+    setLetterSettings(defaultLetterSettings);
+    fetch(`/api/cv-settings/${encodeURIComponent(`letter-${locale}`)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (active && data?.settings) setLetterSettings(mergeLetterSettings(data.settings));
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [locale]);
+
+  function showToast(message, duration = 1800) {
+    setJsonError(message);
+    setTimeout(() => setJsonError(''), duration);
+  }
+
+  async function handleCopyLetterText() {
+    const candidateName = `${baseResume.basics.firstName} ${baseResume.basics.lastName}`;
+    try {
+      await navigator.clipboard.writeText(letterToPlainText(displayedLetter, candidateName));
+      showToast(locale === 'fr' ? 'Lettre de motivation copiée !' : 'Cover letter copied!');
+    } catch {
+      showToast(locale === 'fr' ? 'Copie impossible' : 'Copy failed');
+    }
+  }
+
+  async function handleSaveLetterEdit(draft) {
+    const fr = locale === 'fr';
+    if (!activeLetter) {
+      const next = { ...draft, locale };
+      setDefaultLetter(next);
+      localStorage.setItem(`defaultLetter_${locale}`, JSON.stringify(next));
+      showToast(fr ? 'Lettre par défaut enregistrée !' : 'Default cover letter saved!');
+      return;
+    }
+    try {
+      const res = await fetch(`/api/cover-letters/${encodeURIComponent(activeLetter.id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(draft),
+      });
+      if (!res.ok) throw new Error('save failed');
+      const updated = await res.json();
+      setLetters((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      showToast(fr ? 'Lettre enregistrée !' : 'Cover letter saved!');
+    } catch {
+      showToast(fr ? 'Échec de l’enregistrement' : 'Save failed');
+    }
+  }
+
+  async function handleDeleteLetter() {
+    if (!activeLetter) return;
+    const fr = locale === 'fr';
+    if (!window.confirm(fr ? 'Supprimer cette lettre ?' : 'Delete this cover letter?')) return;
+    try {
+      const res = await fetch(`/api/cover-letters/${encodeURIComponent(activeLetter.id)}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('delete failed');
+      setLetters((prev) => prev.filter((item) => item.id !== activeLetter.id));
+      setActiveLetterId(null);
+      showToast(fr ? 'Lettre supprimée' : 'Cover letter deleted');
+    } catch {
+      showToast(fr ? 'Échec de la suppression' : 'Delete failed');
+    }
+  }
+
+  async function handlePasteLetter() {
+    const fr = locale === 'fr';
+    let text = '';
+    try {
+      text = await navigator.clipboard.readText();
+    } catch {
+      showToast(fr ? 'Collage impossible' : 'Paste failed');
+      return;
+    }
+    let letter = null;
+    try {
+      letter = normalizeLetterPayload(JSON.parse(text));
+    } catch {
+      letter = null;
+    }
+    if (!letter) {
+      showToast(fr ? 'JSON de lettre invalide' : 'Invalid letter JSON');
+      return;
+    }
+    try {
+      const res = await fetch('/api/cover-letters', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(letter),
+      });
+      if (!res.ok) throw new Error('create failed');
+      const created = await res.json();
+      setLetters((prev) => [created, ...prev]);
+      setActiveLetterId(created.id);
+      showToast(fr ? 'Lettre créée !' : 'Cover letter created!', 1500);
+    } catch {
+      showToast(fr ? 'Échec de l’enregistrement de la lettre' : 'Failed to save the letter');
+    }
+  }
+
+  function handleSaveLetterPrompt(value) {
+    setLetterPromptInstructions(value);
+    localStorage.setItem('coverLetterPromptInstructions', value);
+    showToast(locale === 'fr' ? 'Prompt de lettre enregistré !' : 'Cover letter prompt saved!', 1500);
+  }
+
+  async function saveLetterSettings(settings) {
+    setLetterSaveState('saving');
+    try {
+      const res = await fetch(`/api/cv-settings/${encodeURIComponent(`letter-${locale}`)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings }),
+      });
+      if (!res.ok) throw new Error('save failed');
+      setLetterSaveState('saved');
+      setTimeout(() => setLetterSaveState(''), 1500);
+    } catch {
+      setLetterSaveState('error');
+      setTimeout(() => setLetterSaveState(''), 2000);
+    }
+  }
+
+  function handleResetLetterSettings() {
+    setLetterSettings(defaultLetterSettings);
+    saveLetterSettings(defaultLetterSettings);
+  }
+
   function handleCopyPrompt() {
     setPromptOpen(true);
   }
 
   function handleSavePrompt(value) {
     setPromptInstructions(value);
-    localStorage.setItem('resumePromptInstructions', value);
+    localStorage.setItem('resumePromptInstructions_v3', value);
     setJsonError(locale === 'fr' ? 'Prompt enregistré !' : 'Prompt saved!');
     setTimeout(() => setJsonError(''), 1500);
   }
@@ -1292,23 +2541,20 @@ function AppCustome() {
         setJsonError(locale === 'fr' ? 'Format JSON invalide' : 'Invalid JSON format');
         return;
       }
-      const normalResume = normalizeResumeData(baseResume, resume);
-      const canadianResume = normalizeResumeData(baseCanada, resume);
-      setOverrides((prev) => ({
-        ...prev,
-        [`cv-${locale}`]: normalResume,
-        [`canada-${locale}`]: canadianResume,
-      }));
-      await Promise.all([
-        persistCv(normalResume, `cv-${locale}`),
-        persistCv(canadianResume, `canada-${locale}`),
-      ]);
-
       const hasAppInfo =
         application && typeof application === 'object' && application.title && application.company;
-      if (hasAppInfo) {
-        try {
-          const created = await createApplication({
+      if (!hasAppInfo) {
+        setJsonError(locale === 'fr'
+          ? 'Titre et entreprise manquants dans le JSON. Le CV par défaut reste inchangé.'
+          : 'Application title and company are missing from the JSON. The default resume is unchanged.');
+        setTimeout(() => setJsonError(''), 3500);
+        return;
+      }
+
+      const normalResume = normalizeResumeData(baseResume, resume);
+      const coverLetter = application.coverLetter ? String(application.coverLetter) : (source.coverLetter ? String(source.coverLetter) : '');
+      try {
+        const created = await createApplication({
             title: String(application.title),
             company: String(application.company),
             url: application.url ? String(application.url) : '',
@@ -1322,19 +2568,17 @@ function AppCustome() {
             qualified: application.qualified === true,
             matchScore: Number.isFinite(Number(application.matchScore)) ? Number(application.matchScore) : null,
             assessment: application.assessment ? String(application.assessment) : '',
+            coverLetter,
             status: 'Applied',
             resumeJson: JSON.stringify(normalResume, null, 2),
-          });
-          setRefreshKey((k) => k + 1);
-          if (created && created.id) {
-            selectJob(created);
-          }
-          setJsonError(locale === 'fr' ? 'CV appliqué et candidature créée !' : 'Resume applied and application created!');
-        } catch {
-          setJsonError(locale === 'fr' ? 'CV appliqué (échec création)' : 'Resume applied (create failed)');
+        });
+        setRefreshKey((k) => k + 1);
+        if (created && created.id) {
+          selectJob(created);
         }
-      } else {
-        setJsonError('');
+        setJsonError(locale === 'fr' ? 'Candidature créée avec CV et lettre de motivation !' : 'Application created with resume and cover letter!');
+      } catch {
+        setJsonError(locale === 'fr' ? 'Échec de création de la candidature' : 'Could not create the application');
       }
       setTimeout(() => setJsonError(''), 2500);
     } catch {
@@ -1342,23 +2586,21 @@ function AppCustome() {
     }
   }
 
-  // Load saved customization for this resume variant; otherwise fall back to defaults.
+  // Load saved layout preferences only for application-specific resumes.
   useEffect(() => {
-    if (page === 'tracker') return undefined;
+    if (!hasOwnSettings) {
+      setCvSettings(defaultCvSettings);
+      return undefined;
+    }
     let active = true;
-    const defaults = page === 'canada' ? defaultCanadaSettings : defaultCvSettings;
+    const defaults = isCanadaView ? defaultCanadaSettings : defaultCvSettings;
     setCvSettings(defaults);
-    setOverrides((prev) => {
-      const next = { ...prev };
-      delete next[overrideKey];
-      return next;
-    });
     fetch(`/api/cv-settings/${encodeURIComponent(overrideKey)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (!active || !data) return;
         if (data.settings) {
-          setCvSettings(page === 'canada'
+          setCvSettings(isCanadaView
             ? {
                 ...defaultCanadaSettings,
                 ...data.settings,
@@ -1371,25 +2613,23 @@ function AppCustome() {
                 columns: { ...defaultCvSettings.columns, ...(data.settings.columns ?? {}) },
                 visible: { ...defaultCvSettings.visible, ...(data.settings.visible ?? {}) },
                 sectionScale: { ...defaultCvSettings.sectionScale, ...(data.settings.sectionScale ?? {}) },
+                experienceSpacing: { ...defaultCvSettings.experienceSpacing, ...(data.settings.experienceSpacing ?? {}) },
               });
-        }
-        if (data.overrides) {
-          setOverrides((prev) => ({ ...prev, [overrideKey]: data.overrides }));
         }
       })
       .catch(() => {});
     return () => {
       active = false;
     };
-  }, [overrideKey, page]);
+  }, [hasOwnSettings, isCanadaView, overrideKey]);
 
-  async function persistCv(resume = overrides[overrideKey] ?? null, targetKey = overrideKey) {
+  async function persistCv(targetKey = overrideKey) {
     setCvSaveState('saving');
     try {
       const res = await fetch(`/api/cv-settings/${encodeURIComponent(targetKey)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ settings: cvSettings, overrides: resume }),
+        body: JSON.stringify({ settings: cvSettings }),
       });
       if (!res.ok) throw new Error('save failed');
       setCvSaveState('saved');
@@ -1444,20 +2684,27 @@ function AppCustome() {
       return;
     }
     const fixedResume = normalizeResumeData(isCanadaView ? baseCanada : baseResume, resume);
-    setOverrides((prev) => ({ ...prev, [overrideKey]: fixedResume }));
-    setJobResume(null);
-    persistCv(fixedResume);
+    const key = `defaultResume_${isCanadaView ? 'canada-' : ''}${locale}`;
+    localStorage.setItem(key, JSON.stringify(fixedResume));
+    setDefaultResumeRevision((value) => value + 1);
+    setCvSaveState('saved');
+    setTimeout(() => setCvSaveState(''), 1500);
+  }
+
+  function resetDefaultResume() {
+    const key = `defaultResume_${isCanadaView ? 'canada-' : ''}${locale}`;
+    localStorage.removeItem(key);
+    setDefaultResumeRevision((value) => value + 1);
+    setResumeEditorOpen(false);
   }
 
   async function handleResetCv() {
-    const defaults = page === 'canada' ? defaultCanadaSettings : defaultCvSettings;
+    if (!hasOwnSettings) {
+      setCvSettings(defaultCvSettings);
+      return;
+    }
+    const defaults = isCanadaView ? defaultCanadaSettings : defaultCvSettings;
     setCvSettings(defaults);
-    setOverrides((prev) => {
-      const next = { ...prev };
-      delete next[overrideKey];
-      return next;
-    });
-    setJobResume(null);
     setCvSaveState('saving');
     try {
       const res = await fetch(`/api/cv-settings/${encodeURIComponent(overrideKey)}`, {
@@ -1486,6 +2733,7 @@ function AppCustome() {
     setApplicationFormat('cv');
     setPage('application');
     setJobDetailsOpen(false);
+    setDeleteConfirmOpen(false);
     setSidebarOpen(true);
   }
 
@@ -1493,8 +2741,35 @@ function AppCustome() {
     setActiveJob(null);
     setJobResume(null);
     setJobDetailsOpen(false);
+    setDeleteConfirmOpen(false);
+    setResumeEditorOpen(false);
+    setCvPanelOpen(false);
+    setCvSettings(defaultCvSettings);
     setApplicationFormat('cv');
     setPage('cv');
+  }
+
+  async function deleteActiveApplication() {
+    if (!activeJob?.id || deletingApplication) return;
+    setDeletingApplication(true);
+    try {
+      const response = await fetch(`/api/applications/${encodeURIComponent(activeJob.id)}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('delete failed');
+      setDeleteConfirmOpen(false);
+      setRefreshKey((key) => key + 1);
+      setActiveJob(null);
+      setJobResume(null);
+      setJobDetailsOpen(false);
+      setResumeEditorOpen(false);
+      setCvPanelOpen(false);
+      setPage('tracker');
+      setJsonError(locale === 'fr' ? 'Candidature supprimée.' : 'Application deleted.');
+      setTimeout(() => setJsonError(''), 2500);
+    } catch {
+      setJsonError(locale === 'fr' ? 'Impossible de supprimer la candidature.' : 'Could not delete the application.');
+    } finally {
+      setDeletingApplication(false);
+    }
   }
 
   function stepJob(delta) {
@@ -1508,17 +2783,24 @@ function AppCustome() {
   const effectiveSettings = isCanadaView
     ? {
         ...defaultCanadaSettings,
-        ...cvSettings,
-        pageMargins: { ...defaultCanadaSettings.pageMargins, ...(cvSettings.pageMargins ?? {}) },
-        visible: { ...defaultCanadaSettings.visible, ...(cvSettings.visible ?? {}) },
+        ...(hasOwnSettings ? cvSettings : {}),
+        pageMargins: { ...defaultCanadaSettings.pageMargins, ...(hasOwnSettings ? cvSettings.pageMargins : {}) },
+        visible: { ...defaultCanadaSettings.visible, ...(hasOwnSettings ? cvSettings.visible : {}) },
+        experienceSpacing: { ...defaultCvSettings.experienceSpacing, ...(hasOwnSettings ? cvSettings.experienceSpacing : {}) },
       }
     : {
         ...defaultCvSettings,
-        ...cvSettings,
-        columns: { ...defaultCvSettings.columns, ...(cvSettings.columns ?? {}) },
-        visible: { ...defaultCvSettings.visible, ...(cvSettings.visible ?? {}) },
-        sectionScale: { ...defaultCvSettings.sectionScale, ...(cvSettings.sectionScale ?? {}) },
+      ...cvSettings,
+      columns: { ...defaultCvSettings.columns, ...(cvSettings.columns ?? {}) },
+      visible: { ...defaultCvSettings.visible, ...(cvSettings.visible ?? {}) },
+      sectionScale: { ...defaultCvSettings.sectionScale, ...(cvSettings.sectionScale ?? {}) },
+      experienceSpacing: { ...defaultCvSettings.experienceSpacing, ...(cvSettings.experienceSpacing ?? {}) },
       };
+  const expSpacing = effectiveSettings.experienceSpacing;
+  const expVars = {
+    '--exp-desc-margin-top': `${expSpacing.marginTopOn ? expSpacing.marginTop : 0}rem`,
+    '--exp-desc-gap': `${expSpacing.gapOn ? expSpacing.gap : 0}rem`,
+  };
   const leftSections = SECTION_ORDER.filter(
     (key) => effectiveSettings.visible[key] && effectiveSettings.columns?.[key] === 'left',
   );
@@ -1528,37 +2810,61 @@ function AppCustome() {
 
   return (
     <div className="app_frame">
-      <CandidateSidebar
-        locale={locale}
-        open={sidebarOpen}
-        onToggle={() => setSidebarOpen((o) => !o)}
-        refreshKey={refreshKey}
-        activeId={activeJob?.id}
-        onApps={setJobList}
-        onSelect={selectJob}
-      />
-      <FloatingTools
-        locale={locale}
-        page={page}
-        onCopy={handleCopy}
-        onPaste={handlePaste}
-        onCopyPrompt={handleCopyPrompt}
-        onEditResume={() => setResumeEditorOpen(true)}
-      />
+      {isLetterPage ? (
+        <LetterHistorySidebar
+          locale={locale}
+          open={sidebarOpen}
+          onToggle={() => setSidebarOpen((o) => !o)}
+          letters={letters}
+          activeId={activeLetterId}
+          onSelect={setActiveLetterId}
+        />
+      ) : (
+        <CandidateSidebar
+          locale={locale}
+          open={sidebarOpen}
+          onToggle={() => setSidebarOpen((o) => !o)}
+          refreshKey={refreshKey}
+          activeId={activeJob?.id}
+          onApps={setJobList}
+          onSelect={selectJob}
+        />
+      )}
       <ActionToast message={jsonError} />
       <main className="l-main bd-container">
-        <PageNav
-          page={page}
-          onPageChange={(nextPage) => {
-            if (nextPage === 'cv') clearJob();
-            else {
-              setActiveJob(null);
-              setJobResume(null);
-              setPage(nextPage);
-            }
-          }}
-          locale={locale}
-        />
+        <div className="workspace_toolbar">
+          <PageNav
+            page={page}
+            onPageChange={(nextPage) => {
+              if (nextPage === 'cv') {
+                if (page === 'cover-letter') {
+                  setPage(activeJob ? 'application' : 'cv');
+                } else {
+                  clearJob();
+                }
+              } else if (nextPage === 'cover-letter') {
+                setResumeEditorOpen(false);
+                setCvPanelOpen(false);
+                setPage('cover-letter');
+              } else if (nextPage === 'tracker') {
+                setResumeEditorOpen(false);
+                setCvPanelOpen(false);
+                setPage('tracker');
+              }
+            }}
+            locale={locale}
+          />
+          <FloatingTools
+            locale={locale}
+            page={page}
+            onCopy={handleCopy}
+            onPaste={isLetterPage ? handlePasteLetter : handlePaste}
+            onCopyPrompt={isLetterPage ? () => setLetterPromptOpen(true) : handleCopyPrompt}
+            onEditResume={() => setResumeEditorOpen(true)}
+            onCopyCoverLetter={handleCopyLetterText}
+            onEditCoverLetter={() => setLetterEditorOpen(true)}
+          />
+        </div>
         {page !== 'tracker' && (
           <ActionBar
             locale={locale}
@@ -1566,8 +2872,30 @@ function AppCustome() {
             onDownload={handleDownload}
           />
         )}
-        {page !== 'tracker' && promptOpen && <PromptModal locale={locale} resumeData={baseResume} initialInstructions={promptInstructions} onSave={handleSavePrompt} onClose={() => setPromptOpen(false)} onCopied={(message) => { setJsonError(message); setTimeout(() => setJsonError(''), 1800); }} />}
-        {page !== 'tracker' && (
+        {page !== 'tracker' && !isLetterPage && promptOpen && <PromptModal locale={locale} resumeData={baseResume} initialInstructions={promptInstructions} onSave={handleSavePrompt} onClose={() => setPromptOpen(false)} onCopied={(message) => { setJsonError(message); setTimeout(() => setJsonError(''), 1800); }} />}
+        {page === 'cv' && resumeEditorOpen && !activeJob && (
+          <ResumeEditorModal
+            locale={locale}
+            resumeData={isCanadaView ? displayCanada : displayResume}
+            onSave={handleSaveResume}
+            onReset={resetDefaultResume}
+            onClose={() => setResumeEditorOpen(false)}
+            saveState={cvSaveState}
+            mode="default"
+          />
+        )}
+        {page === 'cv' && resumeEditorOpen && activeJob && (
+          <ResumeEditorModal
+            locale={locale}
+            resumeData={normalizeResumeData(isCanadaView ? baseCanada : baseResume, jobResume ?? (isCanadaView ? baseCanada : baseResume))}
+            onSave={handleSaveResume}
+            onReset={() => { restoreApplicationResume(); setResumeEditorOpen(false); }}
+            onClose={() => setResumeEditorOpen(false)}
+            saveState={cvSaveState}
+            mode="application"
+          />
+        )}
+        {page !== 'tracker' && page !== 'cover-letter' && (
           <CvCustomizer
             locale={locale}
             variant={isCanadaView ? 'canada' : 'cv'}
@@ -1575,22 +2903,92 @@ function AppCustome() {
             onToggle={() => setCvPanelOpen((o) => !o)}
             settings={effectiveSettings}
             onSettingsChange={setCvSettings}
-            onSave={handleSaveCv}
+            onSave={hasOwnSettings ? handleSaveCv : undefined}
             onReset={handleResetCv}
             saveState={cvSaveState}
           />
         )}
-        {page === 'cv' ? (
+        {isLetterPage ? (
+          <section className="cover-letter-page">
+            {letterEditorOpen && (
+              <LetterEditorModal
+                locale={locale}
+                letter={displayedLetter}
+                onSave={handleSaveLetterEdit}
+                onClose={() => setLetterEditorOpen(false)}
+              />
+            )}
+            {letterPromptOpen && (
+              <LetterPromptModal
+                locale={locale}
+                resumeData={baseResume}
+                defaultLetter={defaultLetter}
+                initialInstructions={letterPromptInstructions}
+                onSave={handleSaveLetterPrompt}
+                onClose={() => setLetterPromptOpen(false)}
+                onCopied={(message) => showToast(message)}
+              />
+            )}
+            <div className="active-job-toolbar letter-toolbar" aria-label={locale === 'fr' ? 'Lettres de motivation' : 'Cover letters'}>
+              <select
+                className="letter-select"
+                value={activeLetterId ?? ''}
+                onChange={(e) => setActiveLetterId(e.target.value || null)}
+                aria-label={locale === 'fr' ? 'Choisir une lettre' : 'Choose a letter'}
+              >
+                <option value="">{locale === 'fr' ? 'Lettre par défaut' : 'Default cover letter'}</option>
+                {letters.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {[item.company, item.jobTitle].filter(Boolean).join(' · ')}{item.locale === 'en' ? ' (EN)' : ''}
+                  </option>
+                ))}
+              </select>
+              {activeLetter && (
+                <button type="button" className="action_button" onClick={handleDeleteLetter}>
+                  <FontAwesomeIcon icon={['fas', 'trash']} />
+                  <span>{locale === 'fr' ? 'Supprimer cette lettre' : 'Delete this letter'}</span>
+                </button>
+              )}
+            </div>
+            <LetterView
+              locale={locale}
+              resumeData={baseResume}
+              letter={displayedLetter}
+              settings={letterSettings}
+            />
+            <LetterCustomizer
+              locale={locale}
+              open={letterPanelOpen}
+              onToggle={() => setLetterPanelOpen((o) => !o)}
+              settings={letterSettings}
+              onSettingsChange={setLetterSettings}
+              onSave={() => saveLetterSettings(letterSettings)}
+              onReset={handleResetLetterSettings}
+              saveState={letterSaveState}
+            />
+          </section>
+        ) : page === 'cv' && isCanadaView ? (
           <>
-            {resumeEditorOpen && <ResumeEditorModal locale={locale} resumeData={displayResume} onSave={handleSaveResume} onReset={() => {
-              if (activeJob) {
-                if (jobResume) {
-                  setJobResume(jobResume);
-                }
-                return;
-              }
-              handleResetCv();
-            }} onClose={() => setResumeEditorOpen(false)} saveState={cvSaveState} mode={activeJob ? 'application' : 'default'} />}
+            <div className="application-format-nav default-format-nav" role="group" aria-label={locale === 'fr' ? 'Format du CV' : 'Resume format'}>
+              <button type="button" className={defaultFormat === 'cv' ? 'is-active' : ''} onClick={() => setDefaultFormat('cv')}>
+                {locale === 'fr' ? 'CV standard' : 'Standard resume'}
+              </button>
+              <button type="button" className={defaultFormat === 'canada' ? 'is-active' : ''} onClick={() => setDefaultFormat('canada')}>
+                {locale === 'fr' ? 'CV canadien' : 'Canadian resume'}
+              </button>
+            </div>
+            <CanadianCV resumeData={displayCanada} locale={locale} settings={effectiveSettings} />
+          </>
+        ) : page === 'cv' ? (
+          <>
+            <div className="application-format-nav default-format-nav" role="group" aria-label={locale === 'fr' ? 'Format du CV' : 'Resume format'}>
+              <button type="button" className={defaultFormat === 'cv' ? 'is-active' : ''} onClick={() => setDefaultFormat('cv')}>
+                {locale === 'fr' ? 'CV standard' : 'Standard resume'}
+              </button>
+              <button type="button" className={defaultFormat === 'canada' ? 'is-active' : ''} onClick={() => setDefaultFormat('canada')}>
+                {locale === 'fr' ? 'CV canadien' : 'Canadian resume'}
+              </button>
+            </div>
             {activeJob && (
               <div className="active-job-toolbar" aria-label={locale === 'fr' ? 'CV de candidature' : 'Application resume'}>
                 <button type="button" className="action_button" onClick={() => setJobDetailsOpen(true)}><FontAwesomeIcon icon={['fas', 'circle-info']} /><span>{locale === 'fr' ? 'Détails de la candidature' : 'Application details'}</span></button>
@@ -1615,6 +3013,9 @@ function AppCustome() {
                 id="area-cv"
                 style={{
                   '--cv-font-scale': effectiveSettings.fontScale,
+                  '--title-scale': effectiveSettings.titleScale ?? 1,
+                  '--title-transform': (effectiveSettings.titleCaps ?? true) ? 'uppercase' : 'none',
+                  '--title-letter-spacing': (effectiveSettings.titleCaps ?? true) ? '0.24em' : '0.02em',
                   '--photo-size': `${effectiveSettings.photoSize ?? 96}px`,
                   '--accent': effectiveSettings.accent,
                   '--accent-strong': effectiveSettings.accent,
@@ -1623,13 +3024,13 @@ function AppCustome() {
                 <aside className="resume_left">
                   {leftSections.map((key) => {
                     const Section = SECTION_COMPONENTS[key];
-                    return <div className="cv-section-zone" style={{ '--section-scale': effectiveSettings.sectionScale[key] }} key={key}><Section resumeData={displayResume} showImage={effectiveSettings.showImage} /></div>;
+                    return <div className="cv-section-zone" style={{ '--section-scale': effectiveSettings.sectionScale[key], ...expVars }} key={key}><Section resumeData={displayResume} locale={locale} showImage={effectiveSettings.showImage} /></div>;
                   })}
                 </aside>
                 <section className="resume_right">
                   {rightSections.map((key) => {
                     const Section = SECTION_COMPONENTS[key];
-                    return <div className="cv-section-zone" style={{ '--section-scale': effectiveSettings.sectionScale[key] }} key={key}><Section resumeData={displayResume} showImage={effectiveSettings.showImage} /></div>;
+                    return <div className="cv-section-zone" style={{ '--section-scale': effectiveSettings.sectionScale[key], ...expVars }} key={key}><Section resumeData={displayResume} locale={locale} showImage={effectiveSettings.showImage} /></div>;
                   })}
                 </section>
               </div>
@@ -1657,7 +3058,31 @@ function AppCustome() {
                   onFormatChange={setApplicationFormat}
                   onHome={clearJob}
                   onDetails={() => setJobDetailsOpen(true)}
+                  onDelete={() => setDeleteConfirmOpen(true)}
                 />
+                {deleteConfirmOpen && (
+                  <ServiceModal
+                    title={locale === 'fr' ? 'Confirmer la suppression' : 'Confirm deletion'}
+                    onClose={() => setDeleteConfirmOpen(false)}
+                  >
+                    <p className="service-confirm-copy">
+                      {locale === 'fr'
+                        ? `Supprimer la candidature « ${activeJob.title} » chez ${activeJob.company} ? Cette action est définitive.`
+                        : `Delete the application “${activeJob.title}” at ${activeJob.company}? This action cannot be undone.`}
+                    </p>
+                    <footer className="service-modal-actions">
+                      <button type="button" className="cvx-btn" onClick={() => setDeleteConfirmOpen(false)} disabled={deletingApplication}>
+                        {locale === 'fr' ? 'Annuler' : 'Cancel'}
+                      </button>
+                      <button type="button" className="trk-btn trk-btn--danger" onClick={deleteActiveApplication} disabled={deletingApplication}>
+                        <FontAwesomeIcon icon={['fas', 'trash']} />
+                        {deletingApplication
+                          ? locale === 'fr' ? 'Suppression…' : 'Deleting…'
+                          : locale === 'fr' ? 'Supprimer définitivement' : 'Delete permanently'}
+                      </button>
+                    </footer>
+                  </ServiceModal>
+                )}
                 {jobDetailsOpen && (
                   <ServiceModal title={locale === 'fr' ? 'Détails de la candidature' : 'Application details'} onClose={() => setJobDetailsOpen(false)} wide>
                     <JobInfo
@@ -1678,6 +3103,9 @@ function AppCustome() {
                       id="area-cv"
                       style={{
                         '--cv-font-scale': effectiveSettings.fontScale,
+                        '--title-scale': effectiveSettings.titleScale ?? 1,
+                        '--title-transform': (effectiveSettings.titleCaps ?? true) ? 'uppercase' : 'none',
+                        '--title-letter-spacing': (effectiveSettings.titleCaps ?? true) ? '0.24em' : '0.02em',
                         '--photo-size': `${effectiveSettings.photoSize ?? 96}px`,
                         '--accent': effectiveSettings.accent,
                         '--accent-strong': effectiveSettings.accent,
@@ -1686,13 +3114,13 @@ function AppCustome() {
                       <aside className="resume_left">
                         {leftSections.map((key) => {
                           const Section = SECTION_COMPONENTS[key];
-                          return <div className="cv-section-zone" style={{ '--section-scale': effectiveSettings.sectionScale[key] }} key={key}><Section resumeData={displayResume} showImage={effectiveSettings.showImage} /></div>;
+                          return <div className="cv-section-zone" style={{ '--section-scale': effectiveSettings.sectionScale[key], ...expVars }} key={key}><Section resumeData={displayResume} locale={locale} showImage={effectiveSettings.showImage} /></div>;
                         })}
                       </aside>
                       <section className="resume_right">
                         {rightSections.map((key) => {
                           const Section = SECTION_COMPONENTS[key];
-                          return <div className="cv-section-zone" style={{ '--section-scale': effectiveSettings.sectionScale[key] }} key={key}><Section resumeData={displayResume} showImage={effectiveSettings.showImage} /></div>;
+                          return <div className="cv-section-zone" style={{ '--section-scale': effectiveSettings.sectionScale[key], ...expVars }} key={key}><Section resumeData={displayResume} locale={locale} showImage={effectiveSettings.showImage} /></div>;
                         })}
                       </section>
                     </div>
@@ -1703,8 +3131,6 @@ function AppCustome() {
               <p className="application-empty">{locale === 'fr' ? 'Sélectionnez une candidature.' : 'Select an application.'}</p>
             )}
           </section>
-        ) : page === 'canada' ? (
-          <CanadianCV resumeData={displayCanada} locale={locale} settings={effectiveSettings} />
         ) : (
           <ApplicationTracker
             locale={locale}
