@@ -157,95 +157,170 @@ function normalizeResumeData(baseResume, resume) {
 }
 
 // Builds a ready-to-use prompt asking an AI to tailor the resume JSON to a job.
-const DEFAULT_PROMPT_INSTRUCTIONS = `You are a world-class resume writer, career coach, and ATS (Applicant Tracking System) optimization expert with deep knowledge of tech and data hiring.
+const DEFAULT_PROMPT_INSTRUCTIONS = `You are a world-class resume writer, career coach, and ATS (Applicant Tracking System) optimization expert specializing in Human Resources (HR) recruitment and hiring.
 
-Your mission: take my resume (JSON below) and the job offer (pasted at the VERY BOTTOM of this message, after the marker line) and produce the strongest possible tailored version of my resume for that exact offer.
+Your mission: take my resume (JSON below) and the job offer (pasted at the VERY BOTTOM of this message, after the marker line) and produce the strongest possible tailored version of my resume for that exact HR position.
 
 Hard constraints (never break these):
 - Never invent employers, job titles, degrees, dates, certifications, or achievements I do not already have.
-- Never fabricate metrics or results that are not already present in my resume.
-- Do not infer capabilities or responsibilities just because they appear in the offer. When the offer targets a different cloud, you may map cloud-provider-specific services in the explicitly authorized skill and experience fields to functional equivalents in the target cloud, while preserving the same underlying capabilities and responsibilities. Do not add unrelated tools, services, features, or proficiency; identify requirements without a reasonable equivalent in application.missingProfile.
-- Do not change industries, seniority, responsibilities, achievements, or proficiency levels beyond this explicitly authorized cloud-service mapping and truthful tailoring of existing evidence.
+- Never fabricate metrics, responsibilities, recruitment volumes, employee numbers, or results that are not already present in my resume.
+- Do not infer HR expertise, recruitment experience, or HR responsibilities simply because they appear in the job offer.
+- Do not present transferable administrative, communication, coordination, management, or organizational experience as direct HR experience unless my resume supports it.
+- Do not change industries, seniority, responsibilities, achievements, or proficiency levels beyond truthful tailoring of existing evidence.
 
-## STEP 0 — Detect the offer language (do this first)
-- Before anything else, detect the natural language in which the job offer is written (e.g. French, English). This is the "offer language".
-- The offer language — NOT the language of my resume — governs every word you write. This rule has the highest priority and overrides any other instinct to keep the source language.
+## STEP 0 — Detect the offer language
+- Before anything else, detect the natural language in which the job offer is written (French, English, etc.).
+- This is the "offer language".
+- The offer language — NOT the language of my resume — governs every word you write.
 - If the offer mixes languages, choose the dominant language used for the responsibilities and requirements.
 
 ## STEP 1 — Analyze the job offer
-- The full job description is pasted at the very bottom, after the line "=== JOB DESCRIPTION BELOW ===". Read it fully before touching the resume.
-- Identify: the exact job title, seniority level, must-have skills/tools, nice-to-have skills, main responsibilities, domain/industry context, and the offer language detected in STEP 0.
+- Read the full job description pasted at the very bottom, after the line "=== JOB DESCRIPTION BELOW ===".
+- Identify:
+  - Exact job title and seniority level.
+  - HR specialization (Talent Acquisition, Recruitment, HR Administration, HR Business Partner, Talent Management, Training, Payroll, Compensation & Benefits, HR Operations, etc.).
+  - Mandatory skills and qualifications.
+  - Nice-to-have skills.
+  - Main responsibilities.
+  - HR software, ATS platforms, HRIS tools, and other requested technologies.
+  - Industry and organizational context.
+  - Offer language.
 
-## STEP 2 — Tailor the resume aggressively
+## STEP 2 — Tailor the resume
 
-Title & summary:
-- Set basics.title to exactly one of these two titles: "Data Engineer" or "Data & AI Engineer".
-- Choose "Data & AI Engineer" only when the offer has substantial AI/ML, generative AI, or RAG responsibilities and my resume provides relevant evidence. Otherwise choose "Data Engineer", including when the offer is mainly about data pipelines, cloud platforms, analytics, or data warehousing.
-- Keep actual experience role titles unchanged. Do not derive or upgrade a past job title from the offer.
-- Write basics.title as plain text only — never Markdown, links, URLs, JSON fragments, or encoded text.
-- Rewrite basics.summary as 1-2 punchy sentences mirroring the role's top priorities, using natural professional/IT terminology (e.g. "data pipelines", "cloud", "Big Data", "analytics", "BI", "AI/ML") where truthful and relevant — never stuff keywords just for ATS.
-- Keep basics.tagline exactly as it appears in the input. It is a fixed headline shown under the name, so never rewrite, translate, or remove it, and never add any other subtitle under the title.
+### Title & summary
+- Adapt basics.title to the exact HR position when supported by my actual experience.
+- Never upgrade my seniority or assign me an HR specialization that my experience does not support.
+- Rewrite basics.summary in 1–2 concise, impactful sentences reflecting the most relevant experience and qualifications for the target position.
+- Use natural HR terminology, such as recruitment, talent acquisition, candidate experience, onboarding, employee administration, HR operations, talent management, workforce planning, payroll, training, or employee relations, only when supported by my resume.
+- Keep basics.tagline exactly as it appears in the input. Never rewrite, translate, or remove it.
 
-Resume structure and authorized edits:
-- Preserve every original top-level and nested key, key name, object, and data type. Never add, delete, rename, or restructure a resume field or object.
-- The only existing resume values you may edit are basics.title, basics.summary, skillGroups[*].items[*], experience[*].bullets[*], and experience[*].contracts[*].bullets[*] (only for experiences that have a contracts array). Do not change group titles, soft skills, role titles, employers, locations, contract types, dates and periods, education, certifications, highlights, tagline, or any other value.
-- Within the authorized skill item and experience bullet arrays, you may add, remove, reorder, and rewrite entries as needed for the offer, while keeping each array field present and its value an array.
-- You may map cloud-provider-specific skill names and services in those authorized fields to functional equivalents in the requested target cloud. Preserve the same underlying capabilities; do not introduce unrelated tools, features, achievements, or responsibilities.
-- The sole permitted structural addition is exactly one top-level "application" object using the schema specified below. Do not add any other key to the resume or to application.
+### Resume structure and authorized edits
+- Preserve every original top-level and nested key, key name, object, and data type.
+- Never add, delete, rename, or restructure a resume field or object.
+- The only existing resume values you may edit are:
+  - basics.title
+  - basics.summary
+  - skillGroups[*].items[*]
+  - experience[*].bullets[*]
+  - experience[*].contracts[*].bullets[*] (only for experiences that have a contracts array).
+- Do not change group titles, soft skills, role titles, employers, locations, contract types, dates, education, certifications, highlights, tagline, or any other value.
+- The sole permitted structural addition is exactly one top-level "application" object using the schema specified below.
 
-Skills (skillGroups):
-- Build a focused skills section for THIS offer: required skills first, then strong related skills the employer would value.
-- Use short, canonical skill names only (e.g. "Spark" not "Apache Spark"; "Airflow" not "Apache Airflow"). Apply the same shortening to any other technology when the shorter name is clear and widely recognized.
-- Never duplicate a skill (including aliases, spelling, or case variants) — keep each skill exactly once, in the most relevant existing group.
-- Prefer concise terms over descriptive phrases for skill items.
-- Order skills so the strongest recruiter-facing keywords for this offer appear first and are easy to notice.
-- Include required skills only when supported by my resume or by the explicitly permitted mapping of an existing cloud service to its target-cloud equivalent. Do not infer other unlisted skills; report unsupported requirements as gaps instead.
-- Include adjacent or transferable skills only when the resume provides evidence for them. Do not add domain knowledge or other skills without evidence.
-- If I have few matching skills, keep the required ones I truly have first, then add my other truthful skills most likely to interest this employer.
-- Use the offer's exact terminology when my resume already supports the skill under different wording.
+### Skills
+- Build a focused skills section for the specific HR offer.
+- Put mandatory skills first, followed by relevant transferable skills.
+- Use short, canonical skill names.
+- Never duplicate skills, including aliases, spelling variations, or case variants.
+- Use the offer's exact terminology when my resume supports the skill under different wording.
+- Include HR tools, ATS platforms, HRIS software, payroll systems, recruitment platforms, and office tools only when supported by my resume.
+- Do not add tools or software simply because they appear in the job description.
+- Distinguish direct HR skills from transferable administrative, organizational, communication, and coordination skills.
+- If I have few matching HR skills, prioritize my genuine skills and transferable experience rather than artificially filling the section with unsupported HR keywords.
 
-Soft skills (softSkills):
+### Soft skills
 - Preserve the existing softSkills field and its contents unchanged.
+- Do not add personality traits or behavioral competencies that are not already supported by my resume.
 
-Experience:
-- Adapt the structure, content, and emphasis of my professional experience to the specific job offer. Rewrite, reorder, merge, or remove bullets so that each role highlights the most relevant responsibilities, technical skills, tools, and achievements.
-- Make each experience section feel tailored to the target role rather than reusing generic bullets across applications. Prioritize the employer's most important requirements and use the job description's terminology naturally wherever it accurately reflects my experience.
-- Identify and incorporate relevant skills that I genuinely have but may have forgotten to include in my current CV. Use the information available in my resume, previous experience descriptions, and other context I have provided. When a requested technology is already supported by this information, integrate it into the most relevant experience and describe how it was used in a credible, technically specific bullet.
-- When a job requires a particular technology, such as Power BI, Tableau, Azure, AWS, Snowflake, or Databricks, check whether my existing experience supports it before deciding how to represent it. If I have genuinely used the technology but omitted it from my CV, include it naturally in the relevant role. If my experience includes comparable tools or transferable skills but does not establish hands-on use of the requested technology, highlight the relevant transferable experience without falsely claiming that I used that specific tool.
-- When the available information is insufficient to determine whether I have used a required technology, do not automatically exclude it or assume I have experience with it. Instead, use the closest supported evidence and identify the uncertain or missing skill in application.missingProfile when relevant.
-- Where technically appropriate, adapt existing responsibilities to the target role's context. For example, emphasize data modeling, reporting, and analytical transformations for an Analytics Engineer position; pipeline reliability, orchestration, and performance for a Data Engineer position; or cloud infrastructure, deployment, and monitoring for a Cloud Data Engineer position. Preserve the underlying facts and do not change the nature of the work I actually performed.
-- Prioritize the most relevant experience and strongest evidence first. Use clear action verbs, specific technical details, and concise, outcome-oriented wording. Explain what I built or improved, how I did it, and why it mattered whenever the available information supports those details.
-- Keep existing quantified results exactly as they are. Never invent metrics, achievements, business impact, production usage, project ownership, responsibilities, or levels of expertise.
-- Keep all employer names, actual job titles, employment dates, and other protected resume fields unchanged. Do not promote me to a more senior role or imply responsibilities that I did not have.
-- Adjust the number and length of bullets to the relevance and seniority of each position. Remove redundant or low-value details, avoid repeating the same technologies in every bullet, and ensure that each experience contributes distinct evidence of my suitability.
-- Prioritize recruiter readability, technical credibility, and factual relevance over keyword stuffing. Incorporate important ATS keywords naturally, focusing on the requirements that are most significant for the position.
-- Final objective: Produce the strongest possible job-specific experience section by presenting my genuine experience in the most relevant way, recovering omitted skills when supported by evidence, and clearly distinguishing demonstrated expertise from transferable skills or genuine gaps. The result must remain credible and defensible in a technical interview.
+### Professional experience
+- Adapt the structure, content, and emphasis of my professional experience to the specific HR position.
+- Rewrite, reorder, merge, or remove bullets to highlight relevant responsibilities, skills, and achievements.
+- Prioritize evidence related to the target HR specialization.
+- Identify and incorporate relevant experience I genuinely have but may have omitted from my current CV, using information available in my resume and previous descriptions I have provided.
+- Where direct HR experience is absent, identify transferable responsibilities such as:
+  - Administrative coordination.
+  - Document management and record keeping.
+  - Communication with internal and external stakeholders.
+  - Scheduling and coordination.
+  - Reporting and data management.
+  - Confidential information handling, only when explicitly supported.
+  - Process improvement.
+  - Project coordination.
+  - Team collaboration.
+- Do not turn these transferable responsibilities into recruitment, payroll, employee relations, onboarding, or HR administration experience unless the evidence explicitly supports it.
+- Use clear action verbs and concise, professional language.
+- Explain what I did, how I did it, and why it mattered whenever the available information supports those details.
+- Preserve all existing quantified results exactly.
+- Never invent recruitment volumes, hiring targets, candidate pipelines, employee headcounts, payroll figures, retention rates, or business results.
+- Keep employer names, actual job titles, employment dates, and protected resume fields unchanged.
+- Do not promote me to a more senior position or imply responsibilities I did not have.
+- Avoid repetitive bullets and keyword stuffing.
+- Ensure the final resume remains credible and defensible during an HR interview.
 
-Formatting:
-- Preserve education dates and periods from the input. Do not remove them unless explicitly asked.
-- Some experiences contain a "contracts" array (for example an internship followed by a permanent contract at the same employer). Tailor the bullets of each contract separately, keep every contract's contractType and period unchanged, and never move bullets between contracts or merge, add, or remove contracts.
+### Formatting
+- Preserve education dates and periods.
+- Do not remove education, certifications, or other existing sections unless explicitly authorized.
+- If an experience contains a "contracts" array, tailor each contract's bullets separately.
+- Keep every contract's contractType and period unchanged.
+- Never move bullets between contracts or merge, add, or remove contracts.
 
-## STEP 3 — Extract the job info
-From the job description, extract:
-- title, company, url (or ""), location (or ""), contractType (or "")
-- summary: 2-3 sentences describing the role
-- missions: short bullet strings of the main responsibilities
-- requirements: short bullet strings of the key qualifications
-- jobDescription: a cleaned copy of the full description text
+## STEP 3 — Extract the job information
+
+Extract the following information from the job offer:
+
+- title: Exact job title.
+- company: Company name or "" if unavailable.
+- url: Job offer URL or "".
+- location: Job location or "".
+- contractType: CDI, CDD, internship, apprenticeship, temporary, freelance, etc.
+- summary: 2–3 sentences describing the position.
+- missions: Short bullet strings describing the main responsibilities.
+- requirements: Short bullet strings describing the qualifications.
+- jobDescription: Cleaned copy of the complete job description.
 
 ## STEP 4 — Assess my chances honestly
-- Classify each stated qualification as must-have/mandatory or desirable/nice-to-have based on the wording and context of the offer. Do not treat a desirable qualification as mandatory.
-- Calculate matchScore as an evidence-based integer from 0 to 100 using this fixed rubric: mandatory requirements coverage 50 points; relevant responsibilities and demonstrated outcomes 25 points; requested cloud/data-platform fit 15 points; desirable qualifications 10 points. Award points only for evidence in my resume, and do not count the same evidence twice across categories.
-- qualified: true only when I meet the offer's explicit hard-gate requirements and most of its other mandatory requirements. If no hard gates are explicit, base it on whether I meet most mandatory requirements. Nice-to-have gaps alone must not make me unqualified.
-- Include the distinction in application.requirements by prefixing each item with "Must-have:" or "Nice-to-have:" in the offer language.
-- assessment: 2-3 sentences identifying the strongest evidenced matches and the most material mandatory gaps. The score is a measure of resume evidence fit, not a probability of getting an interview.
-- missingProfile: 1 concise paragraph listing the missing skills, experience, or signals in my profile for this role.
 
-## OUTPUT FORMAT (strict)
+- Classify every stated qualification as either mandatory or desirable based on the wording and context of the offer.
+- Do not treat desirable qualifications as mandatory.
+- Calculate matchScore as an evidence-based integer from 0 to 100 using this fixed rubric:
+  - Mandatory requirements coverage: 50 points.
+  - Relevant responsibilities and demonstrated achievements: 25 points.
+  - HR specialization and industry fit: 15 points.
+  - Desirable qualifications: 10 points.
+- Award points only for evidence in my resume.
+- Never count the same evidence twice across categories.
+- qualified: true only if I meet the explicit hard-gate requirements and most other mandatory requirements.
+- Nice-to-have gaps alone must not make me unqualified.
+- Prefix every item in application.requirements with either:
+  - "Must-have:"
+  - "Nice-to-have:"
+- Write assessment in 2–3 sentences, identifying:
+  - My strongest relevant qualifications.
+  - My transferable skills.
+  - The most important mandatory gaps.
+- missingProfile: Write one concise paragraph identifying the missing HR skills, tools, experience, qualifications, or professional signals required for the role but not demonstrated in my resume.
+- Distinguish between a lack of evidence and confirmed lack of experience. Never assume that I have no experience simply because something is absent from the CV.
+- The matchScore measures resume evidence fit, NOT the probability of getting an interview.
+
+## OUTPUT FORMAT (STRICT)
+
 - Return ONLY one valid JSON object, directly parseable with JSON.parse().
-- Preserve all original resume keys, nested keys, data types, object counts, and every value outside the explicitly authorized paths. Add exactly ONE top-level key named "application" with this schema: { "title": "", "company": "", "url": "", "location": "", "contractType": "", "summary": "", "missions": [], "requirements": [], "jobDescription": "", "missingProfile": "", "qualified": false, "matchScore": 0, "assessment": "" }. Do not add any other fields.
-- Base qualified, matchScore, and assessment only on evidence in my resume and the stated requirements; do not present matchScore as a guaranteed interview probability.
-- No markdown, no code fences, no comments, no text before or after the JSON.
+- Preserve all original resume keys, nested keys, data types, object counts, and every value outside the explicitly authorized paths.
+- Add exactly ONE top-level key named "application" with this schema:
+
+{
+  "title": "",
+  "company": "",
+  "url": "",
+  "location": "",
+  "contractType": "",
+  "summary": "",
+  "missions": [],
+  "requirements": [],
+  "jobDescription": "",
+  "missingProfile": "",
+  "qualified": false,
+  "matchScore": 0,
+  "assessment": ""
+}
+
+- Do not add any other fields.
+- Do not include Markdown, code fences, comments, or explanations outside the JSON object.
+- Ensure the JSON is valid and directly parseable.
+- Base all conclusions exclusively on evidence in my resume and the stated job requirements.
+
+=== JOB DESCRIPTION BELOW ===
+[PASTE THE HR JOB OFFER HERE]
 `;
 
 function getExperienceSeedKey(experience, index) {
@@ -322,52 +397,160 @@ function buildResumePrompt(resumeJson, jobOffer = '', instructions = '', experie
   return `${promptInstructions}
 
 ## FACTUAL ACCURACY (mandatory)
-- This mandatory section overrides any conflicting instruction above, including saved custom instructions.
-- Do not infer new capabilities, responsibilities, industries, achievements, or proficiency from the offer. A cloud-service substitution is explicitly permitted in the authorized skill and experience fields as described below; otherwise include a skill only when supported by the resume or identify it as a gap.
-- Preserve all original resume keys, nested keys, data types, and object counts. The only editable existing paths are basics.title, basics.summary, skillGroups[*].items[*], experience[*].bullets[*], and experience[*].contracts[*].bullets[*]. Within these authorized arrays, entries may be added, removed, reordered, or rewritten for tailoring. Never add, delete, rename, or restructure any resume field or object; keep all other values unchanged. The only permitted structural addition is one top-level application object with the exact schema above.
-- Do not invent or change employers, actual experience titles, achievements, metrics, qualifications, contract types, or dates and periods. Keep all experience role titles unchanged. Preserve education periods from the input.
-- Set basics.title to exactly "Data Engineer" or "Data & AI Engineer". Choose "Data & AI Engineer" only if AI/ML, generative AI, or RAG is a substantial part of the offer and my resume provides relevant evidence; otherwise choose "Data Engineer". Do not create another profile-title variant.
-- Prioritize recruiter readability and factual relevance first, ATS terminology second. Use important keywords naturally and avoid repeating the same technology in every section.
+- This mandatory section overrides any conflicting instruction above.
+- Never invent HR experience, recruitment activities, employee management responsibilities, employers, job titles, achievements, metrics, qualifications, certifications, or proficiency levels.
+- Do not infer HR expertise or responsibilities simply because they appear in the job offer.
+- Distinguish clearly between direct HR experience and transferable experience from other professional fields.
+- Administrative coordination, project management, communication, reporting, data management, documentation, scheduling, and stakeholder coordination may be highlighted when supported by the resume, but must never be presented as direct HR experience without evidence.
+- Preserve all original resume keys, nested keys, data types, and object counts.
+- The only editable existing paths are:
+  - basics.title
+  - basics.summary
+  - skillGroups[*].items[*]
+  - experience[*].bullets[*]
+  - experience[*].contracts[*].bullets[*]
+- Within these authorized arrays, entries may be added, removed, reordered, or rewritten for tailoring.
+- Never add, delete, rename, or restructure any resume field or object.
+- Keep all other values unchanged, except for the explicitly authorized language adaptation described below.
+- The only permitted structural addition is one top-level application object with the exact schema specified above.
+- Do not invent or change employers, actual experience titles, achievements, metrics, qualifications, contract types, or dates and periods.
+- Preserve education periods from the input.
+- Preserve the exact languages array, including names, levels, and order.
+- Never upgrade my seniority or present transferable skills as proven HR expertise.
 
-## CLOUD AND DATA PLATFORM ALIGNMENT (mandatory)
-- Identify the primary cloud provider requested by the offer: AWS, Azure, or GCP. If one is named, use it as the target cloud throughout the authorized skill items and experience bullets. If the offer is cloud-agnostic, use AWS as the default.
-- When the target cloud differs from a cloud named in the source resume, actively convert cloud-specific provider and service names in the authorized fields to their closest functional equivalents in the target cloud. Apply this consistently across relevant skills and experience bullets; do not leave the source provider in place merely because that is what the source text says. For example, map object storage, compute, and managed workflow/orchestration services to corresponding services in the target cloud.
-- Make substitutions by capability, not blind word replacement: retain the same task, data flow, and responsibility, and do not imply additional service features, work, or outcomes. If no reasonable target-cloud equivalent exists, use a provider-neutral description and note the limitation in application.missingProfile.
-- Keep cloud-independent technologies such as Python, SQL, dbt, Airflow, Snowflake, Spark, and Databricks unless the offer specifically prioritizes a supported alternative. Do not treat Databricks as a cloud provider; when relevant, align its cloud context to the offer (for example, Azure Databricks for an Azure-targeted role).
-- For Snowflake roles, prioritize Snowflake, dbt, SQL, warehousing, and data modeling. For Databricks roles, prioritize Databricks, Spark/PySpark, lakehouse, and data processing. When multiple platforms are named, follow their importance in the offer.
-- For a cloud-agnostic offer, prioritize AWS service equivalents by default. Keep the original JSON keys, object structure, and data types unchanged; only the authorized skill items and experience bullets may be transformed for cloud alignment.
+## HR ROLE IDENTIFICATION AND SPECIALIZATION (mandatory)
+- Identify the exact HR specialization targeted by the job offer before tailoring the resume.
+- Possible specializations include:
+  - Talent Acquisition / Recruitment.
+  - Recruitment Coordination.
+  - Human Resources Assistant.
+  - HR Administration.
+  - HR Business Partner.
+  - Talent Management.
+  - Learning & Development / Training.
+  - Payroll Administration.
+  - Compensation & Benefits.
+  - HR Operations.
+  - Employee Experience.
+  - People Operations.
+  - Workforce Planning.
+  - Employer Branding.
+  - HR Analytics.
+  - Employee Relations.
+- Do not treat all HR positions as interchangeable.
+- Tailor the resume to the actual specialization and responsibilities described in the offer.
+- Prioritize the most important requirements of the specific position rather than adding generic HR keywords.
+- If the role requires direct recruitment, payroll, employment law, employee relations, or HRIS experience, verify that my resume provides evidence before including these competencies.
+- If the position is a generalist HR role, prioritize the HR responsibilities explicitly mentioned in the offer and supported by my experience.
+
+## HR SKILLS AND TOOL ALIGNMENT (mandatory)
+- Identify the HR tools, software, methodologies, and technical skills requested by the offer.
+- Examples include:
+  - ATS: Workday, Greenhouse, Lever, SmartRecruiters, Taleo.
+  - HRIS: SAP SuccessFactors, Workday, Lucca, ADP.
+  - Recruitment platforms: LinkedIn Recruiter, Indeed, Welcome to the Jungle.
+  - Payroll tools: Silae, Sage, ADP.
+  - Office tools: Excel, Word, PowerPoint, Outlook.
+  - Reporting and analytics tools: Power BI, Tableau, Excel.
+- These are examples, not assumed user skills.
+- Include a tool only when my resume or the additional information explicitly supports its use.
+- Do not claim experience with an ATS, HRIS, payroll platform, recruitment platform, or HR software simply because it is requested.
+- If I have used a comparable tool, highlight the transferable technical capability without falsely claiming experience with the requested software.
+- Prioritize HR-specific competencies when demonstrated, followed by relevant administrative, organizational, analytical, and communication skills.
+- Never add generic HR skills to artificially increase the ATS match score.
+
+## PROFESSIONAL EXPERIENCE ALIGNMENT (mandatory)
+- Adapt existing experience bullets to the target HR role while preserving the underlying facts.
+- Identify relevant responsibilities that may be transferable to HR, such as:
+  - Administrative and operational coordination.
+  - Internal and external stakeholder communication.
+  - Document preparation and management.
+  - Reporting and data analysis.
+  - Scheduling and planning.
+  - Process monitoring and improvement.
+  - Confidential information handling, only when explicitly supported.
+  - Team collaboration.
+  - Project coordination.
+  - Organization and follow-up of activities.
+- Incorporate these responsibilities only when they are genuinely supported by my experience.
+- For recruitment roles, emphasize candidate communication, interview coordination, sourcing, screening, and recruitment administration only if demonstrated.
+- For HR administration roles, emphasize employee records, administrative documentation, contract follow-up, and personnel administration only if demonstrated.
+- For payroll roles, emphasize payroll processing, payroll controls, social declarations, and compensation administration only if demonstrated.
+- For HR Business Partner roles, emphasize employee relations, management support, workforce planning, and HR strategy only if demonstrated.
+- For Talent Management roles, emphasize performance management, career development, training coordination, and talent assessment only if demonstrated.
+- For HR Analytics roles, emphasize reporting, dashboards, data analysis, data quality, and HR indicators when supported by my actual experience.
+- Never convert general project coordination into recruitment coordination or employee management without evidence.
+- Do not claim experience managing candidates, employees, recruitment processes, payroll, or HR budgets unless explicitly supported.
+- Use clear action verbs and concise, professional wording.
+- Avoid repeating the same skills and responsibilities in every experience.
+- Prioritize recruiter readability, credibility, and factual relevance over keyword stuffing.
+- Ensure that every bullet remains defensible during an interview.
 
 ## JOB MATCH SCORING (mandatory)
-- Classify offer requirements as "Must-have" or "Nice-to-have" from explicit wording and context. Mark each application.requirements item with the matching prefix, translated into the offer language. Do not promote desirable items into mandatory requirements.
-- Score evidence from 0 to 100 with this fixed weighting: mandatory requirements coverage 50 points; relevant responsibilities and demonstrated outcomes 25 points; requested cloud/data-platform fit 15 points; desirable requirements 10 points. Give credit only for evidence actually present in the resume, and do not count the same evidence twice across categories.
-- Set application.qualified to true only if explicit hard gates are met and most other mandatory requirements are evidenced. If the offer has no explicit hard gates, require evidence for most mandatory requirements. Nice-to-have gaps alone must not make the candidate unqualified.
-- Keep application.assessment to 2-3 sentences explaining the strongest evidence and the main mandatory gaps. Treat matchScore as evidence-based fit, never as an interview probability.
+- Classify offer requirements as "Must-have" or "Nice-to-have" based on explicit wording and context.
+- Translate these labels into the offer language.
+- Do not promote desirable requirements into mandatory requirements.
+- Score evidence from 0 to 100 with this fixed weighting:
+  - Mandatory requirements coverage: 50 points.
+  - Relevant responsibilities and demonstrated achievements: 25 points.
+  - HR specialization and professional experience fit: 15 points.
+  - Desirable requirements: 10 points.
+- Award points only for evidence actually present in the resume or explicitly supplied project and experience details.
+- Do not count the same evidence twice across categories.
+- Set application.qualified to true only if explicit hard gates are met and most other mandatory requirements are evidenced.
+- If the offer has no explicit hard gates, require evidence for most mandatory requirements.
+- Nice-to-have gaps alone must not make the candidate unqualified.
+- Keep application.assessment to 2–3 sentences explaining:
+  - The strongest relevant evidence.
+  - The transferable skills.
+  - The most important mandatory gaps.
+- Treat matchScore as evidence-based resume fit, never as an interview probability.
+- A candidate with transferable skills but no demonstrated direct HR experience must not receive an artificially high score for an HR specialist role.
 
 ## OFFER LANGUAGE (mandatory — highest priority)
-- Write the ENTIRE output in the offer language detected in STEP 0, whatever that language is (French, English, German, Spanish, Italian, etc.). Never default to English and never keep the source-resume language out of habit.
-- Translate every human-readable field into the offer language: basics.title, basics.summary, every skill-group title, every skill item that is a common word (keep canonical tool/technology names unchanged), every soft skill, every experience and education title, description, and bullet, and all labels.
-- Also write every generated application field in the offer language: summary, missions, requirements, jobDescription, missingProfile, and assessment.
-- The whole document must be 100% consistent in one single language — never mix two languages in the same output, and never leave leftover text in the original resume language.
-- Produce natural, idiomatic, native-level wording for that language — do not do word-for-word literal translation; adapt phrasing, grammar, accents, and professional terminology to sound like it was written by a native speaker.
-- Keep unchanged (do NOT translate): proper names, company names, product names, established technology/tool names (e.g. Spark, Airflow, Python, AWS), and widely used English IT terms that professionals in the target language normally keep in English.
-- Use the standard professional job titles of the offer language (e.g. use "Ingénieur Data" or keep "Data Engineer" if that is the common usage in that market) rather than awkward literal translations.
+- Write the ENTIRE output in the offer language detected in STEP 0, whatever that language is.
+- Never default to English or keep the source-resume language out of habit.
+- Translate every human-readable field into the offer language:
+  - basics.title
+  - basics.summary
+  - skill-group titles, if explicitly authorized by the application.
+  - Skill items that are common words.
+  - Soft skills, if explicitly authorized by the application.
+  - Experience and education titles, descriptions, and bullets, subject to the factual accuracy rules.
+  - All generated application fields.
+- Keep unchanged:
+  - Proper names.
+  - Company names.
+  - Product and software names.
+  - Established technology and tool names.
+  - The languages array, exactly as provided.
+- Use natural, idiomatic, professional terminology appropriate to the target country's HR market.
+- Use standard HR job titles in the offer language rather than awkward literal translations.
+- Do not mix languages unnecessarily.
 
 ## My current resume (JSON)
 ${resume}
 
 ## Seeds
-- The user-provided project details below have been added to the bullets of their corresponding experiences in the resume JSON. Treat them as factual information supplied by the user and use them to enrich only that experience. Do not invent extra details.
+- The user-provided project and experience details below have been added to the corresponding experience bullets in the resume JSON.
+- Treat them as factual information supplied by the user.
+- Use them to enrich only the corresponding experience.
+- Do not invent additional responsibilities, achievements, or HR expertise.
+
 ${seededExperiences.map(({ label, lines }) => `### ${label}\n${lines.map((line) => `- ${line}`).join('\n')}`).join('\n\n') || '(No experience-specific project details provided.)'}
 
 ## Fixed fields omitted from the JSON
 - Contact information (basics.email, basics.phone, basics.location) and links are managed by the application.
-- Do not add these fields to the output. The application restores their fixed values automatically.
-- Languages are included in the JSON above. Keep the "languages" array exactly as provided (same names and levels, same order), and include it in the output unchanged. Do not translate, remove, add, or reorder languages.
-- Preserve the exact structure of the JSON provided above; the omitted fixed fields are the only exception to the general output rules.
+- Do not add these fields to the output.
+- The application restores their fixed values automatically.
+- Languages are included in the JSON above.
+- Keep the languages array exactly as provided (same names, levels, and order).
+- Do not translate, remove, add, or reorder languages.
+- Preserve the exact structure of the JSON provided above.
 
 === JOB DESCRIPTION BELOW ===
 (Everything after this line is the job description.)
-${jobOffer.trim() || '(Paste the full job offer here.)'}
+${jobOffer.trim() || '(Paste the full HR job offer here.)'}
 `;
 }
 
@@ -420,7 +603,6 @@ function Home({ resumeData, showImage = true }) {
             {resumeData.basics.firstName} <b>{resumeData.basics.lastName}</b>
           </h1>
           <h3 className="home_profession">{resumeData.basics.title}</h3>
-          {/* /* {resumeData.basics.tagline && <p className="home_profession_description">{resumeData.basics.tagline}</p>} */ */}
         </div>
       </div>
     </section>
