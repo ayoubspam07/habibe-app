@@ -411,7 +411,7 @@ function ExperienceSection({ resumeData }) {
 function EducationSection({ resumeData }) {
   return (
     <section className="education section" id="education">
-      <SectionTitle>{resumeData.labels?.education ?? 'Education'}</SectionTitle>
+      <SectionTitle>{'Formations'}</SectionTitle>
 
       <div className="education_container bd-grid">
         {resumeData.education.map((item, index) => (
