@@ -1012,7 +1012,7 @@ function ResumeEditorModal({ locale, resumeData, onSave, onReset, onClose, saveS
       </fieldset>
       {repeatable(fr ? 'Groupes de compétences' : 'Skill groups', 'skillGroups', [{ key: 'title', label: fr ? 'Groupe' : 'Group' }, { key: 'items', label: fr ? 'Compétences, une par ligne' : 'Skills, one per line', list: true }], { title: '', items: [] })}
       <fieldset className="editor-section">
-        <legend>{fr ? 'Compétences comportementales' : 'Soft skills'}</legend>
+        <legend>{fr ? 'Qualités' : 'Soft skills'}</legend>
         <label className="service-field is-full">
           <span>{fr ? 'Une par ligne' : 'One per line'}</span>
           <textarea rows="3" value={(draft.softSkills ?? []).join('\n')} onChange={(event) => setDraft((prev) => ({ ...prev, softSkills: event.target.value.split('\n').map((value) => value.trim()).filter(Boolean) }))} />
