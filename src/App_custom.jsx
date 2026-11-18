@@ -420,7 +420,7 @@ function Home({ resumeData, showImage = true }) {
             {resumeData.basics.firstName} <b>{resumeData.basics.lastName}</b>
           </h1>
           <h3 className="home_profession">{resumeData.basics.title}</h3>
-          {resumeData.basics.tagline && <p className="home_profession_description">{resumeData.basics.tagline}</p>}
+          {/* /* {resumeData.basics.tagline && <p className="home_profession_description">{resumeData.basics.tagline}</p>} */ */}
         </div>
       </div>
     </section>
