@@ -377,7 +377,7 @@ function SoftSkillsSection({ resumeData }) {
 function ExperienceSection({ resumeData }) {
   return (
     <section className="experience section" id="experience">
-      <SectionTitle>{'Expérience professionnelle'}</SectionTitle>
+      <SectionTitle>{'Expériences professionnelles'}</SectionTitle>
       <div className="experience_container bd-grid">
         {resumeData.experience.map((job, index) => (
           <div className="experience_content" key={`${job.company}-${job.role}`}>
