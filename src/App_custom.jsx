@@ -695,7 +695,7 @@ function CvCustomizer({
     onSettingsChange({ ...settings, pageMargins: { ...settings.pageMargins, [edge]: value } });
 
   const sectionLabels = fr
-    ? { profile: 'Identité', contact: 'Contact', summary: 'Profil', highlights: 'Points forts', languages: 'Langues', skills: 'Compétences', softSkills: 'Compétences comportementales', experience: 'Expérience', education: 'Formation', certifications: 'Certifications' }
+    ? { profile: 'Identité', contact: 'Contact', summary: 'Profil', highlights: 'Points forts', languages: 'Langues', skills: 'Compétences', softSkills: 'Qualités', experience: 'Expérience', education: 'Formation', certifications: 'Certifications' }
     : { profile: 'Identity', contact: 'Contact', summary: 'Profile', highlights: 'Highlights', languages: 'Languages', skills: 'Skills', softSkills: 'Soft Skills', experience: 'Experience', education: 'Education', certifications: 'Certifications' };
   const canadaFieldLabels = fr
     ? { name: 'Nom', title: 'Titre professionnel', location: 'Localisation', phone: 'Téléphone', email: 'E-mail', links: 'Liens', education: 'Formation', experience: 'Expérience', skills: 'Compétences', languages: 'Langues' }
