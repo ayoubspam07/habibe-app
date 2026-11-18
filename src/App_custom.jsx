@@ -632,7 +632,7 @@ function SummarySection({ resumeData }) {
   if (!resumeData.basics?.summary) return null;
   return (
     <section className="summary section" id="summary">
-      <SectionTitle>{resumeData.labels?.summary ?? 'Profile'}</SectionTitle>
+      <SectionTitle>{'Profil'}</SectionTitle>
       <p className="summary_text">{resumeData.basics.summary}</p>
     </section>
   );
